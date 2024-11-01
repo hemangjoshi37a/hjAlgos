@@ -1,6 +1,6 @@
 # hjAlgos 🚀
 
-![hjAlgos Banner](https://github.com/user-attachments/assets/93f8c0b1-9de8-40d6-9b9a-cf2f094bbf7b)
+![hjAlgos Banner](https://github.com/user-attachments/assets/93f8c0b1-9de8-40d6-9b9a-cf2f094bbf7b "hjAlgos Dashboard")
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/hemangjoshi37a/hjAlgos.svg?style=social&label=Star)](https://github.com/hemangjoshi37a/hjAlgos)
@@ -28,6 +28,7 @@
 - [📝 Contributing](#-contributing)
 - [🧾 License](#-license)
 - [📫 How to Reach Me](#-how-to-reach-me)
+- [🔗 Other Projects](#-other-projects)
 - [🤝 Sponsorship](#-sponsorship)
 
 ## 🚀 Features
@@ -49,8 +50,13 @@
 - **Live Demo:** [https://hjalgos.hjlabs.in](https://hjalgos.hjlabs.in)
 - **Backtest Results:** [https://hjalgos.hjlabs.in/backtest/](https://hjalgos.hjlabs.in/backtest/)
 
-![Demo Screenshot](https://github.com/user-attachments/assets/9daa4d2f-ccb0-4b44-89bc-59b83e5d4690)
-![Backtest Results](https://github.com/user-attachments/assets/c886124c-01fe-43da-88ff-b7e82d5a40e8)
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/9daa4d2f-ccb0-4b44-89bc-59b83e5d4690" alt="Demo Screenshot" width="600" />
+</div>
+
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/c886124c-01fe-43da-88ff-b7e82d5a40e8" alt="Backtest Results" width="600" />
+</div>
 
 ## 🛠 Installation
 
@@ -189,6 +195,8 @@ Contributions are welcome! Please follow these steps:
 
 Please ensure your code adheres to the project's coding standards and includes appropriate tests.
 
+For detailed contribution guidelines, please refer to [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## 🧾 License
 
 This project is licensed under the [MIT License](LICENSE). See the [LICENSE](LICENSE) file for details.
@@ -208,6 +216,18 @@ This project is licensed under the [MIT License](LICENSE). See the [LICENSE](LIC
 [<img height="36" src="https://cdn.simpleicons.org/Pinterest"/>](https://in.pinterest.com/hemangjoshi37a) &nbsp;
 [<img height="36" src="https://cdn.simpleicons.org/Blogger"/>](http://hemangjoshi.blogspot.com) &nbsp;
 [<img height="36" src="https://cdn.simpleicons.org/gitlab"/>](https://gitlab.com/hemangjoshi37a)
+
+## 🔗 Other Projects
+
+Explore more projects by the author:
+
+- [TrendMaster](https://github.com/hemangjoshi37a/TrendMaster) - Advanced trend analysis tool for traders.
+- [hjalgos_notebooks](https://github.com/hemangjoshi37a/hjalgos_notebooks) - Jupyter notebooks for hjAlgos strategies.
+- [Zerodha-Brokerage-Calculator](https://github.com/hemangjoshi37a/Zerodha-Brokerage-Calculator) - A calculator for Zerodha brokerage fees.
+- [TeleTest](https://github.com/hemangjoshi37a/TeleTest) - Telegram bot for testing trading signals.
+- [Tradingview-Webhook-Manager](https://github.com/hemangjoshi37a/Tradingview-Webhook-Manager) - Manage TradingView webhooks effectively.
+- [Algotrading_Multi_account_Modern_UI](https://github.com/hemangjoshi37a/Algotrading_Multi_account_Modern_UI) - Modern UI for managing multiple algotrading accounts.
+- [pyPortMan](https://github.com/hemangjoshi37a/pyPortMan) - Python portfolio manager for tracking investments.
 
 ## 🤝 Sponsorship
 
