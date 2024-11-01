@@ -1,5 +1,8 @@
 # hjAlgos
 
+![image](https://github.com/user-attachments/assets/93f8c0b1-9de8-40d6-9b9a-cf2f094bbf7b)
+
+
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/yourusername/hjAlgos.svg?style=social&label=Star)](https://github.com/yourusername/hjAlgos)
 [![GitHub forks](https://img.shields.io/github/forks/yourusername/hjAlgos.svg?style=social&label=Fork)](https://github.com/yourusername/hjAlgos/fork)
@@ -18,6 +21,10 @@
 
 - **Live Demo:** [https://hjalgos.hjlabs.in](https://hjalgos.hjlabs.in)
 - **Backtest Results:** [https://hjalgos.hjlabs.in/backtest/](https://hjalgos.hjlabs.in/backtest/)
+![image](https://github.com/user-attachments/assets/9daa4d2f-ccb0-4b44-89bc-59b83e5d4690)
+![image](https://github.com/user-attachments/assets/c886124c-01fe-43da-88ff-b7e82d5a40e8)
+
+
 
 ## 🛠 Installation
 
