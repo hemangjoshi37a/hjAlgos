@@ -1,30 +1,56 @@
-# hjAlgos
+# hjAlgos 🚀
 
-![image](https://github.com/user-attachments/assets/93f8c0b1-9de8-40d6-9b9a-cf2f094bbf7b)
-
+![hjAlgos Banner](https://github.com/user-attachments/assets/93f8c0b1-9de8-40d6-9b9a-cf2f094bbf7b)
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/yourusername/hjAlgos.svg?style=social&label=Star)](https://github.com/yourusername/hjAlgos)
-[![GitHub forks](https://img.shields.io/github/forks/yourusername/hjAlgos.svg?style=social&label=Fork)](https://github.com/yourusername/hjAlgos/fork)
+[![GitHub stars](https://img.shields.io/github/stars/hemangjoshi37a/hjAlgos.svg?style=social&label=Star)](https://github.com/hemangjoshi37a/hjAlgos)
+[![GitHub forks](https://img.shields.io/github/forks/hemangjoshi37a/hjAlgos.svg?style=social&label=Fork)](https://github.com/hemangjoshi37a/hjAlgos/fork)
 
-**hjAlgos** is an open-source algorithmic trading platform that leverages advanced machine learning models to predict stock prices and execute trades in real-time. Integrated with Zerodha for trading and Appwrite for backend services, hjAlgos provides a seamless and automated trading experience for both novice and experienced traders.
+**hjAlgos** is the premier open-source algorithmic trading platform tailored for Zerodha and other leading trading platforms. Harness the power of advanced machine learning models to predict stock prices and execute trades in real-time. Seamlessly integrated with Zerodha for trading and Appwrite for backend services, hjAlgos offers a transparent and automated trading experience for both novice and seasoned traders.
+
+## 📜 Table of Contents
+
+- [🚀 Features](#-features)
+- [📈 Demo and Backtests](#-demo-and-backtests)
+- [🛠 Installation](#-installation)
+  - [Prerequisites](#prerequisites)
+  - [Clone the Repository](#clone-the-repository)
+  - [Create and Activate a Virtual Environment](#create-and-activate-a-virtual-environment)
+  - [Install Dependencies](#install-dependencies)
+  - [Setup Environment Variables](#setup-environment-variables)
+  - [Initialize Appwrite Collections](#initialize-appwrite-collections)
+  - [Load Normalization Parameters](#load-normalization-parameters)
+  - [Load the Pre-trained Model](#load-the-pre-trained-model)
+- [📂 Project Structure](#-project-structure)
+- [💡 Usage](#-usage)
+  - [Running the Predictor](#running-the-predictor)
+  - [Running the Web Application](#running-the-web-application)
+- [📝 Contributing](#-contributing)
+- [🧾 License](#-license)
+- [📫 How to Reach Me](#-how-to-reach-me)
+- [🤝 Sponsorship](#-sponsorship)
 
 ## 🚀 Features
 
-- **Advanced Stock Prediction:** Utilizes a Transformer-based neural network for accurate stock price predictions.
+- **Advanced Stock Prediction:** Utilizes a Transformer-based neural network for highly accurate stock price predictions.
 - **Real-Time Trading:** Automatically executes buy and sell orders based on the latest predictions.
-- **User-Friendly Interface:** Intuitive web interface built with Flask and Bokeh for visualizing predictions and trade history.
+- **User-Friendly Interface:** Intuitive web interface built with Flask and Bokeh for seamless visualization of predictions and trade history.
 - **Backtesting:** Analyze historical performance of trading strategies with comprehensive backtest results.
 - **Secure and Scalable:** Employs environment variables for secure configuration management and scalable backend services.
+- **Open Source Transparency:** Full access to the codebase, fostering trust and community-driven enhancements.
+- **Automated Precision:** Execute trades 24/7 with millisecond accuracy, eliminating human error.
+- **Data-Driven Decisions:** Leverage advanced analytics to make informed trading choices.
+- **Seamless Integration:** Easily connect with Zerodha API and other popular platforms.
+- **Continuous Improvement:** Benefit from community-driven updates and enhancements.
+- **Risk Management:** Implement advanced risk controls to protect your investments.
 
 ## 📈 Demo and Backtests
 
 - **Live Demo:** [https://hjalgos.hjlabs.in](https://hjalgos.hjlabs.in)
 - **Backtest Results:** [https://hjalgos.hjlabs.in/backtest/](https://hjalgos.hjlabs.in/backtest/)
-![image](https://github.com/user-attachments/assets/9daa4d2f-ccb0-4b44-89bc-59b83e5d4690)
-![image](https://github.com/user-attachments/assets/c886124c-01fe-43da-88ff-b7e82d5a40e8)
 
-
+![Demo Screenshot](https://github.com/user-attachments/assets/9daa4d2f-ccb0-4b44-89bc-59b83e5d4690)
+![Backtest Results](https://github.com/user-attachments/assets/c886124c-01fe-43da-88ff-b7e82d5a40e8)
 
 ## 🛠 Installation
 
@@ -38,7 +64,7 @@
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/hjAlgos.git
+git clone https://github.com/hemangjoshi37a/hjAlgos.git
 cd hjAlgos
 ```
 
@@ -181,11 +207,10 @@ This project is licensed under the [MIT License](LICENSE). See the [LICENSE](LIC
 [<img height="36" src="https://cdn.simpleicons.org/Instagram"/>](https://www.instagram.com/hemangjoshi37) &nbsp;
 [<img height="36" src="https://cdn.simpleicons.org/Pinterest"/>](https://in.pinterest.com/hemangjoshi37a) &nbsp;
 [<img height="36" src="https://cdn.simpleicons.org/Blogger"/>](http://hemangjoshi.blogspot.com) &nbsp;
-[<img height="36" src="https://cdn.simpleicons.org/gitlab"/>](https://gitlab.com/hemangjoshi37a) &nbsp;
+[<img height="36" src="https://cdn.simpleicons.org/gitlab"/>](https://gitlab.com/hemangjoshi37a)
 
 ## 🤝 Sponsorship
 
 This project is sponsored by [hjLabs](https://hjlabs.in).
 
 ---
-
