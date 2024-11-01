@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>hjAlgos</title>
+    <!-- Include Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Include Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Include BokehJS -->
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.6.0.min.js"
+            crossorigin="anonymous"></script>
+    <!-- Dark mode support -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {},
+            },
+            variants: {
+                extend: {},
+            },
+            plugins: [],
+        }
+    </script>
+    <!-- Meta viewport for responsive design -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Custom CSS for tooltip -->
+    <style>
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltip-content {
+            visibility: hidden;
+            width: 300px;
+            background-color: #fff;
+            color: #000;
+            text-align: center;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position above the icon */
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .dark .tooltip .tooltip-content {
+            background-color: #2d3748;
+            color: #fff;
+            border-color: #4a5568;
+        }
+        .tooltip:hover .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+    <div class="min-h-screen flex flex-col">
+        <!-- App Bar -->
+        <nav class="bg-white dark:bg-gray-800 shadow">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <h1 class="text-2xl font-bold">hjAlgos</h1>
+                <div class="flex items-center space-x-4">
+                    {% if logged_in %}
+                    <!-- Start/Stop Trading Button -->
+                    {% if not trading %}
+                    <button id="startButton" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">Start Trading</button>
+                    {% else %}
+                    <button id="stopButton" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">Stop Trading</button>
+                    {% endif %}
+                    <!-- Logout Button -->
+                    <button id="logoutButton" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">Logout</button>
+                    {% endif %}
+                    <!-- Dark Mode Toggle -->
+                    <button id="darkModeToggle" class="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <!-- Content -->
+        <main class="flex-grow container mx-auto px-4 py-6">
+            {% if logged_in %}
+            <div class="mb-6">
+                <p class="text-xl">Welcome, <span class="font-semibold">{{ profile_name }}</span>!</p>
+                <p class="text-gray-600 dark:text-gray-400">Available Funds: ₹{{ available_funds }}</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Trading Settings Card -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-md shadow">
+                    <h2 class="text-xl font-semibold mb-4">Trading Settings</h2>
+                    <form id="updateTradingSettingsForm">
+                        <div class="mb-4">
+                            <label for="fundMode" class="block text-sm font-medium mb-2">Select Trading Mode:</label>
+                            <div class="relative">
+                                <select id="fundMode" name="fund_mode" class="block appearance-none w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-3 pr-8 rounded-md leading-tight focus:outline-none focus:border-blue-500">
+                                    <option value="quantity" {% if fund_mode == 'quantity' %}selected{% endif %}>Quantity</option>
+                                    <option value="funds" {% if fund_mode == 'funds' %}selected{% endif %}>Funds</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500 dark:text-gray-400">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label for="quantity" class="block text-sm font-medium mb-2">Enter {{ fund_mode.capitalize() }}:</label>
+                            <input type="number" id="quantity" name="quantity" value="{{ quantity }}" min="1" step="any" required class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-md leading-tight focus:outline-none focus:border-blue-500">
+                        </div>
+                    </form>
+                </div>
+                <!-- Latest Prediction Card -->
+                <div id="latestPrediction" class="bg-white dark:bg-gray-800 p-6 rounded-md shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold">Latest Prediction</h2>
+                        <button id="refreshPredictionButton" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-600 focus:outline-none">
+                            <i class="fas fa-sync-alt fa-lg"></i>
+                        </button>
+                    </div>
+                    {% if latest_prediction %}
+                    <div class="text-center">
+                        <p class="text-2xl font-bold">{{ latest_prediction.stock_symbol }}</p>
+                        <p class="text-gray-600 dark:text-gray-400">Holding Period: {{ latest_prediction.holding_period }} minutes</p>
+                        <p class="text-gray-600 dark:text-gray-400">Prediction Time: {{ latest_prediction.prediction_time }}</p>
+                        <!-- Include the Bokeh plot -->
+                        <!-- {{ plot_div|safe }} -->                        
+                    </div>
+                    {% else %}
+                    <p class="text-gray-600 dark:text-gray-400">No predictions available at the moment.</p>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Backtest Results Button -->
+            <div class="flex justify-center mb-6">
+                <a href="https://hjalgos.hjlabs.in/backtest/" class="px-6 py-3 bg-purple-600 text-white rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-transform transform hover:-translate-y-1">
+                    <i class="fas fa-chart-line mr-2"></i> View Backtest Results (Last 30 Days)
+                </a>
+            </div>
+            <!-- Current Position Section -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Current Position</h2>
+                    <button id="refreshPositionButton" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-600 focus:outline-none">
+                        <i class="fas fa-sync-alt fa-lg"></i>
+                    </button>
+                </div>
+                <div id="currentPosition" class="bg-white dark:bg-gray-800 p-6 rounded-md shadow">
+                    {% if current_position %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p><strong>Stock:</strong> {{ current_position.stock }}</p>
+                            <p><strong>Quantity:</strong> {{ current_position.quantity }}</p>
+                            <p><strong>Order ID:</strong> {{ current_position.order_id }}</p>
+                        </div>
+                        <div>
+                            <p><strong>Entry Time:</strong> {{ current_position.entry_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-600 dark:text-gray-400">No position currently held.</p>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Trade History Section -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Trade History</h2>
+                    <button id="refreshTradesButton" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-600 focus:outline-none">
+                        <i class="fas fa-sync-alt fa-lg"></i>
+                    </button>
+                </div>
+                <div id="tradeHistory" class="overflow-x-auto bg-white dark:bg-gray-800 p-4 rounded-md shadow">
+                    <!-- Trade history will be displayed here -->
+                    <p class="text-center text-gray-600 dark:text-gray-400">Loading trade history...</p>
+                </div>
+            </div>
+            {% else %}
+            <div class="max-w-md mx-auto bg-white dark:bg-gray-800 p-6 rounded-md shadow">
+                <h2 class="text-2xl font-semibold mb-6 text-center">Zerodha Login</h2>
+                <form id="loginForm">
+                    <div class="mb-4">
+                        <label for="userId" class="block text-sm font-medium mb-2">Zerodha User ID:</label>
+                        <input type="text" id="userId" name="user_id" required class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-md leading-tight focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="block text-sm font-medium mb-2">Zerodha Password:</label>
+                        <input type="password" id="password" name="password" required class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-md leading-tight focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="mb-6">
+                        <label for="totpKey" class="block text-sm font-medium mb-2">
+                            Zerodha TOTP Key:
+                            <!-- Tooltip Icon -->
+                            <span class="tooltip">
+                                <a href="https://support.zerodha.com/category/your-zerodha-account/login-credentials/login-credentials-of-trading-platforms/articles/time-based-otp-setup" target="_blank">
+                                    <i class="fas fa-info-circle text-gray-500 ml-1 cursor-pointer"></i>
+                                    <div class="tooltip-content">
+                                        <img src="{{ url_for('static', filename='images/totp_info.png') }}" alt="TOTP Key Info" class="w-full h-auto">
+                                    </div>
+                                </a>
+                            </span>
+                        </label>
+                        <input type="text" id="totpKey" name="totp_key" placeholder="example: VCQEFJTADH2JZICDOMZEYJD5ETABCLYG" required class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-md leading-tight focus:outline-none focus:border-blue-500">
+                    </div>
+                    <button type="submit" class="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">Login</button>
+                </form>
+            </div>
+            {% endif %}
+        </main>
+        <footer class="bg-white dark:bg-gray-800 py-6">
+            <div class="container mx-auto px-4 text-center">
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    {{ current_year }} hjAlgos by <a href="https://hjlabs.in" class="text-blue-600 dark:text-blue-400 hover:underline">hjLabs.in</a> | 
+                    <a href="{{ url_for('disclosure') }}" class="text-blue-600 dark:text-blue-400 hover:underline">Disclosure</a>
+                </p>
+                <!-- Additional Links -->
+                <div class="flex flex-wrap justify-center space-x-6">
+                    <a href="https://hjlabs.in/privacy-policy/" class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 hover:underline">
+                        Privacy Policy
+                    </a>
+                    <a href="https://hjlabs.in/terms-and-conditions/" class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 hover:underline">
+                        Terms and Conditions
+                    </a>
+                    <a href="https://hjlabs.in/refund_returns/" class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 hover:underline">
+                        Returns and Refund Policy
+                    </a>
+                    <a href="https://hjlabs.in/shipping-policy/" class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 hover:underline">
+                        Shipping Policy
+                    </a>
+                    <a href="https://hjlabs.in/about/" class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 hover:underline">
+                        About Us
+                    </a>
+                    <a href="https://hjlabs.in/contact-us/" class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300 hover:underline">
+                        Contact Us
+                    </a>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+    
+    <!-- {{ plot_script|safe }} -->
+    <!-- Include any JavaScript files here -->
+    <script>
+        // Dark mode toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        darkModeToggle.addEventListener('click', () => {
+            const htmlClasses = document.documentElement.classList;
+            if (localStorage.getItem('darkMode') === 'true') {
+                htmlClasses.remove('dark');
+                localStorage.setItem('darkMode', 'false');
+            } else {
+                htmlClasses.add('dark');
+                localStorage.setItem('darkMode', 'true');
+            }
+        });
+        // Load dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.documentElement.classList.add('dark');
+        }
+
+        {% if logged_in %}
+        // Update Trading Settings
+        // Trading settings and actions
+        // Update Trading Settings
+        document.getElementById('fundMode').addEventListener('change', updateTradingSettings);
+        document.getElementById('quantity').addEventListener('change', updateTradingSettings);
+
+        function updateTradingSettings() {
+            const fundMode = document.getElementById('fundMode').value;
+            const quantity = document.getElementById('quantity').value;
+            fetch('/update_quantity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ fund_mode: fundMode, quantity: quantity }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update the label for quantity/funds
+                    updateQuantityLabel();
+                } else {
+                    alert('Error updating trading settings: ' + data.message);
+                }
+            });
+        }
+
+        // Fetch and display trade history
+        function fetchTradeHistory() {
+            fetch('/trade_history')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const trades = data.trades;
+                    displayTradeHistory(trades);
+                } else {
+                    alert('Error fetching trade history: ' + data.message);
+                }
+            });
+        }
+        
+        function displayTradeHistory(trades) {
+            const tradeHistoryDiv = document.getElementById('tradeHistory');
+            tradeHistoryDiv.innerHTML = ''; // Clear existing content
+
+            if (trades.length === 0) {
+                tradeHistoryDiv.innerHTML = '<p class="text-center text-gray-600 dark:text-gray-400">No trades found.</p>';
+                return;
+            }
+
+            // Create a table to display trades
+            const table = document.createElement('table');
+            table.classList.add('min-w-full', 'bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'rounded-md', 'overflow-hidden');
+
+            // Create table header
+            const thead = document.createElement('thead');
+            thead.classList.add('bg-gray-200', 'dark:bg-gray-600');
+            thead.innerHTML = `
+                <tr>
+                    <th class="py-2 px-4 text-left">Order ID</th>
+                    <th class="py-2 px-4 text-left">Status</th>
+                    <th class="py-2 px-4 text-left">Status Message</th>
+                    <th class="py-2 px-4 text-left">Symbol</th>
+                    <th class="py-2 px-4 text-left">Type</th>
+                    <th class="py-2 px-4 text-left">Qty</th>
+                    <th class="py-2 px-4 text-left">Price</th>
+                    <th class="py-2 px-4 text-left">Date</th>
+                </tr>
+            `;
+            table.appendChild(thead);
+
+            // Create table body
+            const tbody = document.createElement('tbody');
+
+            trades.forEach(trade => {
+                const row = document.createElement('tr');
+                row.classList.add('border-t', 'border-gray-300', 'dark:border-gray-600', 'hover:bg-gray-100', 'dark:hover:bg-gray-600');
+                row.innerHTML = `
+                    <td class="py-2 px-4">${trade.order_id}</td>
+                    <td class="py-2 px-4">${trade.status}</td>
+                    <td class="py-2 px-4">${trade.status_message || ''}</td>
+                    <td class="py-2 px-4">${trade.tradingsymbol}</td>
+                    <td class="py-2 px-4">${trade.transaction_type}</td>
+                    <td class="py-2 px-4">${trade.quantity}</td>
+                    <td class="py-2 px-4">${trade.average_price}</td>
+                    <td class="py-2 px-4">${new Date(trade.order_timestamp).toLocaleString()}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(tbody);
+            tradeHistoryDiv.appendChild(table);
+        }
+
+        // Attach event listener to refresh trades button
+        document.getElementById('refreshTradesButton').addEventListener('click', fetchTradeHistory);
+
+        // Fetch trade history when the page loads
+        fetchTradeHistory();
+
+
+
+        // Fetch and update latest prediction
+        function fetchLatestPrediction() {
+            fetch('/latest_prediction')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // For simplicity, reload the page to update the plot
+                    location.reload();
+                } else {
+                    if (data.message && data.message.includes('User session not found')) {
+                        attemptAutoLogin();
+                    } else {
+                        alert('Error fetching latest prediction: ' + data.message);
+                    }
+                }
+            });
+        }
+
+        // Fetch and update current position
+        function fetchCurrentPosition() {
+            fetch('/current_position')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // For simplicity, reload the page to update the position
+                    location.reload();
+                } else {
+                    if (data.message && data.message.includes('User session not found')) {
+                        attemptAutoLogin();
+                    } else {
+                        alert('Error fetching current position: ' + data.message);
+                    }
+                }
+            });
+        }
+
+        // Attach event listeners to refresh buttons
+        document.getElementById('refreshPredictionButton').addEventListener('click', fetchLatestPrediction);
+        document.getElementById('refreshPositionButton').addEventListener('click', fetchCurrentPosition);
+
+
+
+        // Start trading
+        {% if not trading %}
+        document.getElementById('startButton').addEventListener('click', function() {
+            fetch('/start', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'started') {
+                    alert('Trading started.');
+                    location.reload();
+                } else {
+                    if (data.message && data.message.includes('User session not found')) {
+                        attemptAutoLogin();
+                    } else {
+                        alert('Error starting trading: ' + data.message);
+                    }
+                }
+            });
+        });
+        {% else %}
+        // Stop trading
+        
+        // Start/Stop trading
+        const tradingButton = document.getElementById('tradingButton');
+        tradingButton.addEventListener('click', function() {
+            const action = tradingButton.dataset.action;
+            fetch(`/${action}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'started' || data.status === 'stopped') {
+                    alert(`Trading ${action}ed.`);
+                    location.reload();
+                } else {
+                    alert(`Error ${action}ing trading: ` + data.message);
+                }
+            });
+        });
+        
+        {% endif %}
+
+        // Logout
+        document.getElementById('logoutButton').addEventListener('click', function() {
+            fetch('/logout', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                } else {
+                    alert('Error logging out: ' + data.message);
+                }
+            });
+        });
+
+
+        // Update quantity/funds label based on fundMode
+        function updateQuantityLabel() {
+            const fundMode = document.getElementById('fundMode').value;
+            const quantityLabel = document.querySelector('label[for="quantity"]');
+            quantityLabel.textContent = 'Enter ' + fundMode.charAt(0).toUpperCase() + fundMode.slice(1) + ':';
+        }
+
+        // Initial update of quantity label
+        updateQuantityLabel();
+
+        // Function to attempt automatic login with cached credentials
+        function attemptAutoLogin() {
+            const userId = localStorage.getItem('userId');
+            const password = localStorage.getItem('password');
+            const totpKey = localStorage.getItem('totpKey');
+
+            if (userId && password && totpKey) {
+                fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        password: password,
+                        totp_key: totpKey
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    } else {
+                        // Clear cached credentials if login fails
+                        localStorage.removeItem('userId');
+                        localStorage.removeItem('password');
+                        localStorage.removeItem('totpKey');
+                        alert('Automatic login failed: ' + data.message);
+                        location.reload();
+                    }
+                });
+            } else {
+                // No cached credentials, redirect to login page
+                location.reload();
+            }
+        }
+
+        {% else %}
+        // On page load, attempt auto login if credentials are cached
+        document.addEventListener('DOMContentLoaded', function() {
+            const userId = localStorage.getItem('userId');
+            const password = localStorage.getItem('password');
+            const totpKey = localStorage.getItem('totpKey');
+
+            if (userId && password && totpKey) {
+                // Attempt to login automatically
+                fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        password: password,
+                        totp_key: totpKey
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload();
+                    } else {
+                        // Clear cached credentials if login fails
+                        localStorage.removeItem('userId');
+                        localStorage.removeItem('password');
+                        localStorage.removeItem('totpKey');
+                        // Do nothing, user can login manually
+                    }
+                });
+            }
+        });
+
+        // Login form submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const userId = document.getElementById('userId').value;
+            const password = document.getElementById('password').value;
+            const totpKey = document.getElementById('totpKey').value;
+
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    password: password,
+                    totp_key: totpKey
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                } else {
+                    alert('Error logging in: ' + data.message);
+                }
+            });
+        });
+        {% endif %}
+    </script>
+</body>
+</html>
+
+
+

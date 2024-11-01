@@ -1,0 +1,11 @@
+Flask
+torch
+joblib
+pandas
+numpy
+tqdm
+jugaad_trader
+pyotp
+appwrite
+bokeh
+python-dotenv

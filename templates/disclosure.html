@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Disclosure - hjAlgos</title>
+    <!-- Include Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Include Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Dark mode support -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {},
+            },
+            variants: {
+                extend: {},
+            },
+            plugins: [],
+        }
+    </script>
+    <!-- Meta viewport for responsive design -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body class="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+    <div class="min-h-screen flex flex-col">
+        <!-- App Bar -->
+        <nav class="bg-white dark:bg-gray-800 shadow">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <h1 class="text-2xl font-bold">hjAlgos</h1>
+                <div class="flex items-center space-x-4">
+                    <!-- Back Button -->
+                    <a href="{{ url_for('index') }}" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <i class="fas fa-arrow-left mr-2"></i>Back
+                    </a>
+                    <!-- Dark Mode Toggle -->
+                    <button id="darkModeToggle" class="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <!-- Content -->
+        <main class="flex-grow container mx-auto px-4 py-6">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-md shadow">
+                <h2 class="text-2xl font-semibold mb-4">Disclosure</h2>
+                <p class="mb-4">
+                    The information provided on hjAlgos is for educational and informational purposes only. We provide suggestion-based trades and do not guarantee any financial profits or losses. Trading in financial markets involves risk, and you should only invest money you can afford to lose. hjAlgos is not responsible for any losses incurred as a result of using our platform. Users are advised to do their own research and consult with a qualified financial advisor before making any trading decisions.
+                </p>
+                <p class="mb-4">
+                    By using hjAlgos, you acknowledge that you understand these risks and agree to hold hjAlgos harmless from any liabilities.
+                </p>
+            </div>
+        </main>
+        <footer class="bg-white dark:bg-gray-800 py-4">
+            <div class="container mx-auto px-4 text-center">
+                <p class="text-gray-600 dark:text-gray-400">{{ current_year }} hjAlgos by hjLabs.in</p>
+            </div>
+        </footer>
+    </div>
+    <!-- Include any JavaScript files here -->
+    <script>
+        // Dark mode toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        darkModeToggle.addEventListener('click', () => {
+            const htmlClasses = document.documentElement.classList;
+            if (localStorage.getItem('darkMode') === 'true') {
+                htmlClasses.remove('dark');
+                localStorage.setItem('darkMode', 'false');
+            } else {
+                htmlClasses.add('dark');
+                localStorage.setItem('darkMode', 'true');
+            }
+        });
+        // Load dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+</body>
+</html>
