@@ -1,12 +1,14 @@
 # hjAlgos 🚀
 
-![hjAlgos Banner](https://github.com/user-attachments/assets/93f8c0b1-9de8-40d6-9b9a-cf2f094bbf7b "hjAlgos Dashboard")
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/hemangjoshi37a/hjAlgos.svg?style=social&label=Star)](https://github.com/hemangjoshi37a/hjAlgos)
 [![GitHub forks](https://img.shields.io/github/forks/hemangjoshi37a/hjAlgos.svg?style=social&label=Fork)](https://github.com/hemangjoshi37a/hjAlgos/fork)
 
 **hjAlgos** is the premier open-source algorithmic trading platform tailored for Zerodha and other leading trading platforms. Harness the power of advanced machine learning models to predict stock prices and execute trades in real-time. Seamlessly integrated with Zerodha for trading and Appwrite for backend services, hjAlgos offers a transparent and automated trading experience for both novice and seasoned traders.
+
+
+![hjAlgos Banner](https://github.com/user-attachments/assets/93f8c0b1-9de8-40d6-9b9a-cf2f094bbf7b "hjAlgos Dashboard")
 
 ## 📜 Table of Contents
 
