@@ -1,12 +1,12 @@
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify, send_from_directory
 import threading
 import time
-import datetime
 import os
 import logging
 from jugaad_trader import Zerodha
 import pyotp
 
+import datetime as dtt
 # Import Appwrite SDK
 from appwrite.client import Client
 from appwrite.services.databases import Databases
@@ -22,9 +22,14 @@ from bokeh.models import Span
 from dotenv import load_dotenv
 
 from binance.pay.merchant import Merchant as BClient
-import uuid
 import csv
 import os
+
+import pytz
+from datetime import datetime, timedelta
+
+# Define a timezone (e.g., UTC)
+utc = pytz.UTC
 
 
 # Load environment variables from .env file
@@ -40,6 +45,12 @@ binance_pay_secret = os.getenv('BINANCE_PAY_SECRET')
 binance_pay_client = BClient(binance_pay_key, binance_pay_secret)
 
 
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 
 
 # Set up logging
@@ -161,8 +172,8 @@ class UserSession:
             if documents['total'] > 0:
                 prediction = documents['documents'][0]
                 # Check if prediction is recent
-                prediction_time = datetime.datetime.fromisoformat(prediction['prediction_time'])
-                now = datetime.datetime.now()
+                prediction_time = datetime.fromisoformat(prediction['prediction_time'])
+                now = datetime.now()
                 if (now - prediction_time).total_seconds() > 300:
                     logging.info("Latest prediction is too old.")
                     return None
@@ -195,7 +206,7 @@ class UserSession:
                 'stock': stock_symbol,
                 'quantity': int(quantity),
                 'order_id': order_id,
-                'entry_time': datetime.datetime.now()
+                'entry_time': datetime.now()
             }
             logging.info(f"Entered position in {stock_symbol} with quantity {quantity}")
         except Exception as e:
@@ -215,7 +226,7 @@ class UserSession:
                 order_type=self.kite.ORDER_TYPE_MARKET,
                 product=self.kite.PRODUCT_MIS
             )
-            exit_time = datetime.datetime.now()
+            exit_time = datetime.now()
             logging.info(f"Exited position in {stock_symbol} with quantity {quantity}")
 
             # Record trade details in the database
@@ -300,7 +311,7 @@ user_sessions = {}
 @app.route('/', methods=['GET'])
 def index():
     logged_in = 'user_id' in session
-    current_year = datetime.datetime.now().year
+    current_year = datetime.now().year
     if logged_in:
         user_id = session['user_id']
         user_session = user_sessions.get(user_id)
@@ -319,80 +330,18 @@ def index():
 
         # Fetch latest predictions
         latest_prediction = get_latest_prediction()
-        plot_script = ''
-        plot_div = ''
+
         if latest_prediction and user_session:
             stock_symbol = latest_prediction['stock_symbol']
             initial_time_str = latest_prediction.get('initial_prediction_time')
             if initial_time_str:
-                initial_time = datetime.datetime.fromisoformat(initial_time_str)
+                initial_time = datetime.fromisoformat(initial_time_str)
                 if initial_time.tzinfo is None:
-                    initial_time = initial_time.replace(tzinfo=datetime.timezone.utc)
+                    initial_time = initial_time.replace(tzinfo=dtt.timezone.utc)
             else:
-                initial_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)
+                initial_time = datetime.now(dtt.timezone.utc) - dtt.timedelta(hours=1)
 
-            end_time = datetime.datetime.now(datetime.timezone.utc)
-
-            # Get instrument token for the stock
-            try:
-                instruments = user_session.kite.instruments("NSE")
-                instrument_token = next((instrument['instrument_token'] for instrument in instruments if instrument['tradingsymbol'] == stock_symbol), None)
-
-                if instrument_token:
-                    # Fetch historical data
-                    data = user_session.kite.historical_data(
-                        instrument_token=instrument_token,
-                        from_date=initial_time,
-                        to_date=end_time,
-                        interval='minute'
-                    )
-
-                    # Prepare data for Bokeh plot
-                    if data:
-                        dates = [d['date'] for d in data]
-                        opens = [d['open'] for d in data]
-                        highs = [d['high'] for d in data]
-                        lows = [d['low'] for d in data]
-                        closes = [d['close'] for d in data]
-
-                        # Determine whether candles are increasing or decreasing
-                        inc = [close > open_ for close, open_ in zip(closes, opens)]
-                        dec = [open_ > close for open_, close in zip(opens, closes)]
-
-                        # Width of each candle in milliseconds
-                        w = 1 * 60 * 1000  # 1 minute in ms
-
-                        # Create Bokeh plot
-                        p = figure(x_axis_type="datetime", tools="pan,wheel_zoom,box_zoom,reset", width=300, height=200)
-                        p.title.text = f"Candlestick chart for {stock_symbol}"
-
-                        # Plot candlesticks
-                        p.segment(dates, highs, dates, lows, color="black")
-                        p.vbar(x=[d for d, inc_ in zip(dates, inc) if inc_],
-                               width=w,
-                               top=[close for close, inc_ in zip(closes, inc) if inc_],
-                               bottom=[open_ for open_, inc_ in zip(opens, inc) if inc_],
-                               fill_color="#D5E1DD", line_color="black")
-
-                        p.vbar(x=[d for d, dec_ in zip(dates, dec) if dec_],
-                               width=w,
-                               top=[open_ for open_, dec_ in zip(opens, dec) if dec_],
-                               bottom=[close for close, dec_ in zip(closes, dec) if dec_],
-                               fill_color="#F2583E", line_color="black")
-
-                        # Add vertical line at initial_time
-                        vline = Span(location=initial_time.timestamp()*1000, dimension='height', line_color='blue', line_width=1)
-                        p.add_layout(vline)
-
-                        # Generate script and div
-                        plot_script, plot_div = components(p)
-                    else:
-                        logging.info(f"No historical data available for {stock_symbol}")
-                else:
-                    logging.info(f"Instrument token not found for {stock_symbol}")
-
-            except Exception as e:
-                logging.error(f"Error generating plot: {e}")
+            end_time = datetime.now(dtt.timezone.utc)
 
         # Fetch user's premium status
         is_premium = False
@@ -414,8 +363,6 @@ def index():
             available_funds=available_funds,
             latest_prediction=latest_prediction,
             current_position=current_position,
-            plot_script=plot_script,
-            plot_div=plot_div,
             is_premium=is_premium
         )
     else:
@@ -615,7 +562,6 @@ def current_position_route():
 
 
 
-# Route to fetch latest prediction data
 @app.route('/latest_prediction', methods=['GET'])
 def latest_prediction_route():
     user_id = session.get('user_id')
@@ -624,13 +570,14 @@ def latest_prediction_route():
 
     latest_prediction = get_latest_prediction()
     if latest_prediction:
+        update_exit_price(latest_prediction)
         return jsonify({'status': 'success', 'latest_prediction': latest_prediction})
     else:
         return jsonify({'status': 'error', 'message': 'No predictions available'}), 404
 
 @app.route('/disclosure')
 def disclosure():
-    current_year = datetime.datetime.now().year
+    current_year = datetime.now().year
     return render_template('disclosure.html', current_year=current_year)
 
 @app.route('/robots.txt')
@@ -656,9 +603,9 @@ def prediction_chart_data():
         return jsonify({'status': 'error', 'message': 'Missing parameters'}), 400
 
     try:
-        prediction_time = datetime.datetime.fromisoformat(prediction_time_str)
+        prediction_time = datetime.fromisoformat(prediction_time_str)
         if prediction_time.tzinfo is None:
-            prediction_time = prediction_time.replace(tzinfo=datetime.timezone.utc)
+            prediction_time = prediction_time.replace(tzinfo=dtt.timezone.utc)
     except ValueError:
         return jsonify({'status': 'error', 'message': 'Invalid prediction_time format'}), 400
 
@@ -667,8 +614,8 @@ def prediction_chart_data():
         return jsonify({'status': 'error', 'message': 'User session not found'}), 404
 
     try:
-        initial_time = prediction_time - datetime.timedelta(minutes=5)
-        end_time = prediction_time + datetime.timedelta(minutes=holding_period + 5)
+        initial_time = prediction_time - dtt.timedelta(minutes=5)
+        end_time = prediction_time + dtt.timedelta(minutes=holding_period + 5)
 
         # Get instrument token for the stock
         instruments = user_session.kite.instruments("NSE")
@@ -684,7 +631,7 @@ def prediction_chart_data():
             )
             # Process data to convert datetime objects to strings
             for d in data:
-                if isinstance(d['date'], datetime.datetime):
+                if isinstance(d['date'], datetime):
                     d['date'] = d['date'].isoformat()
             # Return data as JSON
             return jsonify({'status': 'success', 'data': data})
@@ -696,7 +643,8 @@ def prediction_chart_data():
         logging.error(f"Error fetching historical data for chart: {e}")
         return jsonify({'status': 'error', 'message': 'Failed to fetch historical data'}), 500
 
-# Route to fetch historical predictions
+
+
 @app.route('/historical_predictions', methods=['GET'])
 def historical_predictions():
     user_id = session.get('user_id')
@@ -720,12 +668,75 @@ def historical_predictions():
             ]
         )
         predictions = documents['documents']
+
+        # Update exit_price and calculate Gained % for each prediction if needed
+        for prediction in predictions:
+            update_exit_price(prediction)
+
         # Return the predictions as JSON
         return jsonify({'status': 'success', 'predictions': predictions})
     except Exception as e:
         logging.error(f"Error fetching historical predictions: {e}")
         return jsonify({'status': 'error', 'message': 'Failed to fetch historical predictions'}), 500
 
+
+def update_exit_price(prediction):
+    if prediction.get('exit_price'):
+        return
+
+    # Convert prediction_time to aware datetime
+    prediction_time = datetime.fromisoformat(prediction['prediction_time']).replace(tzinfo=utc)
+    exit_time = prediction_time + timedelta(minutes=prediction['holding_period'])
+    now = datetime.now(utc)
+
+    user_session = user_sessions.get(session.get('user_id'))
+    if not user_session:
+        return
+
+    try:
+        instruments = user_session.kite.instruments("NSE")
+        instrument_token = next((instrument['instrument_token'] for instrument in instruments if instrument['tradingsymbol'] == prediction['stock_symbol']), None)
+
+        if instrument_token:
+            # Fetch historical data
+            historical_data = user_session.kite.historical_data(
+                instrument_token=instrument_token,
+                from_date=prediction_time - timedelta(minutes=5),
+                to_date=exit_time + timedelta(minutes=5),
+                interval='minute'
+            )
+
+            if historical_data:
+                # Find the exit candle
+                exit_candle = next((candle for candle in historical_data if candle['date'] >= exit_time), None)
+                if exit_candle:
+                    exit_price = exit_candle['close']
+                    if now > exit_time:
+                        databases.update_document(
+                            database_id,
+                            predictions_collection_id,
+                            prediction['$id'],
+                            data={'exit_price': exit_price}
+                        )
+                    prediction['exit_price'] = exit_price
+                else:
+                    # If exit candle is not available, use the latest close price
+                    latest_candle = historical_data[-1]
+                    prediction['temporary_exit_price'] = latest_candle['close']
+
+                # Calculate Gained %
+                enter_price = prediction.get('enter_price', 0)
+                if enter_price:
+                    if prediction.get('exit_price'):
+                        gained_percent = ((prediction['exit_price'] - enter_price) / enter_price) * 100
+                    elif prediction.get('temporary_exit_price'):
+                        gained_percent = ((prediction['temporary_exit_price'] - enter_price) / enter_price) * 100
+                    else:
+                        gained_percent = 0
+                    prediction['gained_percent'] = round(gained_percent, 2)
+    except Exception as e:
+        logging.error(f"Error updating exit price: {e}")    
+        
 
 # Example usage in the route to initiate premium purchase
 @app.route('/initiate_premium_purchase', methods=['POST'])
@@ -774,8 +785,8 @@ def initiate_premium_purchase():
                     'user_id': user_id,
                     'prepay_id': prepay_id,
                     'status': 'INITIAL',
-                    'created_at': datetime.datetime.now().isoformat(),
-                    'updated_at': datetime.datetime.now().isoformat()
+                    'created_at': datetime.now().isoformat(),
+                    'updated_at': datetime.now().isoformat()
                 },
                 permissions=[]
             )
@@ -811,7 +822,7 @@ def check_payment_status():
             prepay_id,
             data={
                 'status': payment_status,
-                'updated_at': datetime.datetime.now().isoformat()
+                'updated_at': datetime.now().isoformat()
             }
         )
         if payment_status == 'PAID':
@@ -842,7 +853,8 @@ def create_collections():
             ('stock_symbol', 'string', 50, True),
             ('holding_period', 'integer', None, True),
             ('prediction_time', 'datetime', None, True),
-            ('ltp', 'float', None, False)
+            ('enter_price', 'float', None, False), 
+            ('exit_price', 'float', None, False),  
         ],
         'trades': [
             ('user_id', 'string', 255, True),
@@ -867,7 +879,8 @@ def create_collections():
             ('user_id', 'string', 255, True),
             ('password', 'string', 255, True),
             ('totp_key', 'string', 255, True),
-            ('is_logged_in', 'boolean', None, True)
+            ('is_logged_in', 'boolean', None, True),
+            ('assigner_user_id', 'string', 255, True) 
         ]
     }
 
@@ -931,8 +944,6 @@ def get_next_merchant_trade_no(csv_file_path):
 
 
 
-
-# Route to add an extra user
 @app.route('/add_extra_user', methods=['POST'])
 def add_extra_user():
     user_id = session.get('user_id')
@@ -944,7 +955,6 @@ def add_extra_user():
     extra_password = data['extra_password']
     extra_totp_key = data['extra_totp_key']
 
-    # Validate credentials with Zerodha
     totp = pyotp.TOTP(extra_totp_key)
     twofa = totp.now()
 
@@ -954,7 +964,6 @@ def add_extra_user():
         kite.login()
         logging.info(f"Extra user {extra_user_id} logged in successfully")
 
-        # Save extra user info in the database
         databases.create_document(
             database_id,
             "extra_users",
@@ -963,7 +972,8 @@ def add_extra_user():
                 'user_id': extra_user_id,
                 'password': extra_password,
                 'totp_key': extra_totp_key,
-                'is_logged_in': True
+                'is_logged_in': True,
+                'assigner_user_id': user_id  # Add this line
             },
             permissions=[]
         )
@@ -973,7 +983,7 @@ def add_extra_user():
         logging.error(f"Extra user login failed: {e}")
         return jsonify({'status': 'error', 'message': 'Login failed. Please check your credentials.'}), 401
 
-# Route to fetch extra users for the current premium user
+
 @app.route('/extra_users', methods=['GET'])
 def extra_users():
     user_id = session.get('user_id')
@@ -985,14 +995,14 @@ def extra_users():
             database_id=database_id,
             collection_id="extra_users",
             queries=[
-                Query.equal('user_id', user_id)
+                Query.equal('assigner_user_id', user_id)
             ]
         )
         extra_users = documents['documents']
         return jsonify({'status': 'success', 'extra_users': extra_users})
     except Exception as e:
         logging.error(f"Error fetching extra users: {e}")
-        return jsonify({'status': 'error', 'message': 'Failed to fetch extra users'}), 500
+        return jsonify({'status': 'error', 'message': 'Failed to fetch extra users'}), 500    
 
 # Route to start trading for an extra user
 @app.route('/start_extra_user_trading', methods=['POST'])
@@ -1048,7 +1058,34 @@ def delete_extra_user():
         logging.error(f"Error deleting extra user {extra_user_id}: {e}")
         return jsonify({'status': 'error', 'message': 'Failed to delete extra user'}), 500
 
+@app.route('/check_login_status', methods=['GET'])
+def check_login_status():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User session not found'}), 401
+    return jsonify({'status': 'success'})
+
+@app.route('/explanation.html')
+def serve_explanation():
+    return send_from_directory('./templates/','explanation.html')
+
 if __name__ == '__main__':
     create_collections()
     app.run(debug=True,port=8731)
-
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

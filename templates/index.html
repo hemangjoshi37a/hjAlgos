@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -13,6 +11,7 @@
     <!-- Include BokehJS -->
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.6.0.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag() { dataLayer.push(arguments); }
@@ -152,31 +151,50 @@
         }
     </style>
 
+    <script>
+        var is_premium = {{ is_premium | default (false) | tojson }};
+    </script>
+
+
+
 </head>
 
 <body class="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
     <div class="min-h-screen flex flex-col">
         <!-- App Bar -->
 
+        <!-- App Bar -->
         <nav class="bg-white dark:bg-gray-800 shadow">
             <div class="container mx-auto px-4 py-4 flex justify-between items-center">
                 <h1 class="text-2xl font-bold">hjAlgos</h1>
                 <div class="flex items-center space-x-4">
+                    <!-- Help Button (Icon) -->
+                    <button id="openExplanationModal"
+                        class="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        <i class="fas fa-question-circle fa-lg"></i>
+                    </button>
+
                     {% if logged_in %}
-                    <!-- Start/Stop Trading Button -->
+                    <!-- Start/Stop Trading Button (Icon) -->
                     {% if not trading %}
                     <button id="startButton"
-                        class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">Start
-                        Trading</button>
+                        class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <i class="fas fa-play fa-lg"></i>
+                    </button>
                     {% else %}
                     <button id="stopButton"
-                        class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">Stop
-                        Trading</button>
+                        class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500">
+                        <i class="fas fa-stop fa-lg"></i>
+                    </button>
                     {% endif %}
-                    <!-- Logout Button -->
+
+                    <!-- Logout Button (Icon) -->
                     <button id="logoutButton"
-                        class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">Logout</button>
+                        class="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        <i class="fas fa-sign-out-alt fa-lg"></i>
+                    </button>
                     {% endif %}
+
                     <!-- Dark Mode Toggle -->
                     <button id="darkModeToggle"
                         class="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500">
@@ -185,8 +203,6 @@
                 </div>
             </div>
         </nav>
-
-
         <!-- Content -->
         <main class="flex-grow container mx-auto px-4 py-6">
             {% if logged_in %}
@@ -195,12 +211,12 @@
                 <p class="text-gray-600 dark:text-gray-400">Available Funds: ₹{{ available_funds }}</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
- 
 
-               <!-- Trading Settings Card -->
+
+                <!-- Trading Settings Card -->
                 <div class="bg-white dark:bg-gray-800 p-6 rounded-md shadow">
                     <h2 class="text-xl font-semibold mb-4">Trading Settings</h2>
-                    <form id="updateTradingSettingsForm">
+                    <form id="updateTradingSettingsForm" class="grid grid-cols-2 gap-4">
                         <div class="mb-4">
                             <label for="fundMode" class="block text-sm font-medium mb-2">Select Trading Mode:</label>
                             <div class="relative">
@@ -214,6 +230,7 @@
                                     class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500 dark:text-gray-400">
                                     <i class="fas fa-chevron-down"></i>
                                 </div>
+
                             </div>
                         </div>
                         <div class="mb-4">
@@ -229,12 +246,10 @@
 
 
 
-
-
                 <!-- Latest Prediction Card -->
                 <div id="latestPrediction" class="bg-white dark:bg-gray-800 p-6 rounded-md shadow relative">
                     <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-xl font-semibold">Latest Prediction</h2>
+                        <h2 class="text-xl font-semibold">Latest AI Recommendation ✨</h2>
                         <div class="flex items-center space-x-2">
                             <!-- List icon button -->
                             <button id="openPredictionHistoryButton"
@@ -255,9 +270,9 @@
                         <p class="text-2xl font-bold">{{ latest_prediction.stock_symbol }}</p>
                         <p class="text-gray-600 dark:text-gray-400">Last Traded Price: {% if latest_prediction.ltp %}{{
                             '%.2f'|format(latest_prediction.ltp) }}{% else %}N/A{% endif %}</p>
-                        <p class="text-gray-600 dark:text-gray-400">Holding Period: {{ latest_prediction.holding_period
+                        <p class="text-gray-600 dark:text-gray-400">Hold for : {{ latest_prediction.holding_period
                             }} minutes</p>
-                        <p class="text-gray-600 dark:text-gray-400">Prediction Time: {{
+                        <p class="text-gray-600 dark:text-gray-400">AI Recommendation Time: {{
                             latest_prediction.prediction_time }}</p>
                     </div>
                     {% else %}
@@ -268,13 +283,20 @@
 
 
             </div>
+
+
             <!-- Backtest Results Button -->
+            <!-- 
             <div class="flex justify-center mb-6">
                 <a href="https://hjalgos.hjlabs.in/backtest/"
                     class="px-6 py-3 bg-purple-600 text-white rounded-md shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-transform transform hover:-translate-y-1">
                     <i class="fas fa-chart-line mr-2"></i> View Backtest Results (Last 30 Days)
                 </a>
             </div>
+             -->
+
+
+
             <!-- Current Position Section -->
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-4">
@@ -364,27 +386,45 @@
 
 
 
+
             <!-- Premium User Multiple Accounts Management Section -->
-            <div id="premiumMultipleAccounts" class="hidden">
+            <div id="premiumMultipleAccounts" {% if not is_premium %}class="hidden" {% endif %}>
                 <div class="mb-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-xl font-semibold">Manage Multiple Accounts</h2>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-md shadow">
+                    <!-- <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold">Manage Multiple Accounts</h2>
+        </div> -->
+                    <div class="max-w-md mx-auto bg-white dark:bg-gray-800 p-6 rounded-md shadow">
+                        <h2 class="text-2xl font-semibold mb-6 text-center">Add Additional Account</h2>
                         <form id="addAccountForm">
-                            <div class="mb-4">
-                                <label for="extraUserId" class="block text-sm font-medium mb-2">User ID:</label>
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <label for="extraUserId" class="block text-sm font-medium mb-2 col-span-1">Zerodha User
+                                    ID:</label>
                                 <input type="text" id="extraUserId" name="extra_user_id" required
-                                    class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-md leading-tight focus:outline-none focus:border-blue-500">
+                                    class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-2 rounded-md leading-tight focus:outline-none focus:border-blue-500 col-span-1">
                             </div>
-                            <div class="mb-4">
-                                <label for="extraPassword" class="block text-sm font-medium mb-2">Password:</label>
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <label for="extraPassword" class="block text-sm font-medium mb-2 col-span-1">Zerodha
+                                    Password:</label>
                                 <input type="password" id="extraPassword" name="extra_password" required
-                                    class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-md leading-tight focus:outline-none focus:border-blue-500">
+                                    class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-2 rounded-md leading-tight focus:outline-none focus:border-blue-500 col-span-1">
                             </div>
                             <div class="mb-6">
-                                <label for="extraTotpKey" class="block text-sm font-medium mb-2">TOTP Key:</label>
-                                <input type="text" id="extraTotpKey" name="extra_totp_key" required
+                                <label for="extraTotpKey" class="block text-sm font-medium mb-2">
+                                    Zerodha TOTP Key:
+                                    <!-- Tooltip Icon -->
+                                    <span class="tooltip">
+                                        <a href="https://support.zerodha.com/category/your-zerodha-account/login-credentials/login-credentials-of-trading-platforms/articles/time-based-otp-setup"
+                                            target="_blank">
+                                            <i class="fas fa-info-circle text-gray-500 ml-1 cursor-pointer"></i>
+                                            <div class="tooltip-content">
+                                                <img src="{{ url_for('static', filename='images/totp_info.png') }}"
+                                                    alt="TOTP Key Info" class="w-full h-auto">
+                                            </div>
+                                        </a>
+                                    </span>
+                                </label>
+                                <input type="text" id="extraTotpKey" name="extra_totp_key"
+                                    placeholder="example: VCQEFJTADH2JZICDOMZEYJD5ETABCLYG" required
                                     class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-md leading-tight focus:outline-none focus:border-blue-500">
                             </div>
                             <button type="submit"
@@ -396,23 +436,20 @@
                 <div id="extraUsersContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
             </div>
 
-
-
-
-
             {% else %}
             <div class="max-w-md mx-auto bg-white dark:bg-gray-800 p-6 rounded-md shadow">
                 <h2 class="text-2xl font-semibold mb-6 text-center">Zerodha Login</h2>
                 <form id="loginForm">
-                    <div class="mb-4">
-                        <label for="userId" class="block text-sm font-medium mb-2">Zerodha User ID:</label>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <label for="userId" class="block text-sm font-medium mb-2 col-span-1">Zerodha User ID:</label>
                         <input type="text" id="userId" name="user_id" required
-                            class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-md leading-tight focus:outline-none focus:border-blue-500">
+                            class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-2 rounded-md leading-tight focus:outline-none focus:border-blue-500 col-span-1">
                     </div>
-                    <div class="mb-4">
-                        <label for="password" class="block text-sm font-medium mb-2">Zerodha Password:</label>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <label for="password" class="block text-sm font-medium mb-2 col-span-1">Zerodha
+                            Password:</label>
                         <input type="password" id="password" name="password" required
-                            class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-md leading-tight focus:outline-none focus:border-blue-500">
+                            class="block w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 py-2 px-2 rounded-md leading-tight focus:outline-none focus:border-blue-500 col-span-1">
                     </div>
                     <div class="mb-6">
                         <label for="totpKey" class="block text-sm font-medium mb-2">
@@ -512,6 +549,24 @@
     </div>
 
 
+    <!-- Explanation Modal -->
+    <div id="explanationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-md overflow-hidden shadow-lg w-11/12 md:w-3/4 lg:w-1/2">
+            <div class="flex justify-between items-center p-4 border-b border-gray-300 dark:border-gray-600">
+                <h2 class="text-xl font-semibold">How It Works</h2>
+                <button id="closeExplanationModal"
+                    class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 focus:outline-none">
+                    <i class="fas fa-times fa-lg"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <!-- <iframe src="{{ url_for('static', filename='explanation.html') }}" class="w-full h-96" frameborder="0"></iframe> -->
+                <iframe src="{{ url_for('serve_explanation') }}" class="w-full h-96" frameborder="0"></iframe>
+            </div>
+        </div>
+    </div>
+
+
 
     <!-- Chart Modal -->
     <div id="chartModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
@@ -537,122 +592,114 @@
     <script>
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Dark mode toggle
-    const darkModeToggle = document.getElementById('darkModeToggle');
-    darkModeToggle.addEventListener('click', () => {
-        const htmlClasses = document.documentElement.classList;
-        if (localStorage.getItem('darkMode') === 'true') {
-            htmlClasses.remove('dark');
-            localStorage.setItem('darkMode', 'false');
-        } else {
-            htmlClasses.add('dark');
-            localStorage.setItem('darkMode', 'true');
-        }
-    });
-    // Load dark mode preference
-    if (localStorage.getItem('darkMode') === 'true') {
-        document.documentElement.classList.add('dark');
-    }
-
-    {% if logged_in %}
-    // Code for logged-in users
-
-    // Update Trading Settings
-    document.getElementById('fundMode').addEventListener('change', updateTradingSettings);
-    document.getElementById('quantity').addEventListener('change', updateTradingSettings);
-
-    function updateTradingSettings() {
-        const fundMode = document.getElementById('fundMode').value;
-        const quantity = document.getElementById('quantity').value;
-        fetch('/update_quantity', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ fund_mode: fundMode, quantity: quantity }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Update the label for quantity/funds
-                    updateQuantityLabel();
+        document.addEventListener('DOMContentLoaded', function () {
+            // Dark mode toggle
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            darkModeToggle.addEventListener('click', () => {
+                const htmlClasses = document.documentElement.classList;
+                if (localStorage.getItem('darkMode') === 'true') {
+                    htmlClasses.remove('dark');
+                    localStorage.setItem('darkMode', 'false');
                 } else {
-                    alert('Error updating trading settings: ' + data.message);
+                    htmlClasses.add('dark');
+                    localStorage.setItem('darkMode', 'true');
                 }
             });
-    }
+            // Load dark mode preference
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.documentElement.classList.add('dark');
+            }
 
-    function fetchTradeHistory() {
-        fetch('/trade_history')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    const trades = data.trades;
-                    displayTradeHistory(trades);
-                } else {
-                    if (data.message && data.message.includes('User session not found')) {
-                        // Perform a soft logout and then reload the page
-                        softLogoutAndReload();
-                    } else {
-                        alert('Error fetching trade history: ' + data.message);
-                    }
+            {% if logged_in %}
+            // Code for logged-in users
+
+            // Update Trading Settings
+            document.getElementById('fundMode').addEventListener('change', updateTradingSettings);
+            document.getElementById('quantity').addEventListener('change', updateTradingSettings);
+
+            function updateTradingSettings() {
+                const fundMode = document.getElementById('fundMode').value;
+                const quantity = document.getElementById('quantity').value;
+                fetch('/update_quantity', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ fund_mode: fundMode, quantity: quantity }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Update the label for quantity/funds
+                            updateQuantityLabel();
+                        } else {
+                            alert('Error updating trading settings: ' + data.message);
+                        }
+                    });
+            }
+
+
+
+
+
+            function checkUserLoggedIn() {
+                fetch('/check_login_status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status !== 'success') {
+                            // Perform soft logout and reload the page
+                            softLogoutAndReload();
+                        }
+                    });
+            }
+
+            function softLogoutAndReload() {
+                fetch('/logout', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            location.reload();
+                        }
+                    });
+            }
+
+
+
+            function fetchTradeHistory() {
+                fetch('/trade_history')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const trades = data.trades;
+                            displayTradeHistory(trades);
+                        } else {
+                            if (data.message && data.message.includes('User session not found')) {
+                                // Perform a soft logout and then reload the page
+                                softLogoutAndReload();
+                            } else {
+                                alert('Error fetching trade history: ' + data.message);
+                            }
+                        }
+                    });
+            }
+
+            function displayTradeHistory(trades) {
+                const tradeHistoryDiv = document.getElementById('tradeHistory');
+                tradeHistoryDiv.innerHTML = ''; // Clear existing content
+
+                if (trades.length === 0) {
+                    tradeHistoryDiv.innerHTML = '<p class="text-center text-gray-600 dark:text-gray-400">No trades found.</p>';
+                    return;
                 }
-            });
-    }
 
-    function displayTradeHistory(trades) {
-        const tradeHistoryDiv = document.getElementById('tradeHistory');
-        tradeHistoryDiv.innerHTML = ''; // Clear existing content
+                // Create a table to display trades
+                const table = document.createElement('table');
+                table.classList.add('min-w-full', 'bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'rounded-md', 'overflow-hidden');
 
-        if (trades.length === 0) {
-            tradeHistoryDiv.innerHTML = '<p class="text-center text-gray-600 dark:text-gray-400">No trades found.</p>';
-            return;
-        }
-
-        // Create a table to display trades
-        const table = document.createElement('table');
-        table.classList.add('min-w-full', 'bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'rounded-md', 'overflow-hidden');
-
-        // Create table header
-        const thead = document.createElement('thead');
-        thead.classList.add('bg-gray-200', 'dark:bg-gray-600');
-        thead.innerHTML = `
+                // Create table header
+                const thead = document.createElement('thead');
+                thead.classList.add('bg-gray-200', 'dark:bg-gray-600');
+                thead.innerHTML = `
             <tr>
                 <th class="py-2 px-4 text-left">Order ID</th>
                 <th class="py-2 px-4 text-left">Status</th>
@@ -664,15 +711,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 <th class="py-2 px-4 text-left">Date</th>
             </tr>
         `;
-        table.appendChild(thead);
+                table.appendChild(thead);
 
-        // Create table body
-        const tbody = document.createElement('tbody');
+                // Create table body
+                const tbody = document.createElement('tbody');
 
-        trades.forEach(trade => {
-            const row = document.createElement('tr');
-            row.classList.add('border-t', 'border-gray-300', 'dark:border-gray-600', 'hover:bg-gray-100', 'dark:hover:bg-gray-600');
-            row.innerHTML = `
+                trades.forEach(trade => {
+                    const row = document.createElement('tr');
+                    row.classList.add('border-t', 'border-gray-300', 'dark:border-gray-600', 'hover:bg-gray-100', 'dark:hover:bg-gray-600');
+                    row.innerHTML = `
                 <td class="py-2 px-4">${trade.order_id}</td>
                 <td class="py-2 px-4">${trade.status}</td>
                 <td class="py-2 px-4">${trade.status_message || ''}</td>
@@ -682,608 +729,623 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td class="py-2 px-4">${trade.average_price}</td>
                 <td class="py-2 px-4">${new Date(trade.order_timestamp).toLocaleString()}</td>
             `;
-            tbody.appendChild(row);
-        });
-
-        table.appendChild(tbody);
-        tradeHistoryDiv.appendChild(table);
-    }
-
-    // Fetch trade history when the page loads
-    fetchTradeHistory();
-
-    // Attach event listener to refresh trades button
-    document.getElementById('refreshTradesButton').addEventListener('click', fetchTradeHistory);
-
-    // Fetch and update latest prediction
-    function fetchLatestPrediction() {
-        fetch('/latest_prediction')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // For simplicity, reload the page to update the plot
-                    location.reload();
-                } else {
-                    if (data.message && data.message.includes('User session not found')) {
-                        attemptAutoLogin();
-                    } else {
-                        alert('Error fetching latest prediction: ' + data.message);
-                    }
-                }
-            });
-    }
-
-    // Fetch and update current position
-    function fetchCurrentPosition() {
-        fetch('/current_position')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // For simplicity, reload the page to update the position
-                    location.reload();
-                } else {
-                    if (data.message && data.message.includes('User session not found')) {
-                        attemptAutoLogin();
-                    } else {
-                        alert('Error fetching current position: ' + data.message);
-                    }
-                }
-            });
-    }
-
-    // Attach event listeners to refresh buttons
-    document.getElementById('refreshPredictionButton').addEventListener('click', fetchLatestPrediction);
-    document.getElementById('refreshPositionButton').addEventListener('click', fetchCurrentPosition);
-
-    // Start/Stop trading
-    {% if not trading %}
-    document.getElementById('startButton').addEventListener('click', function () {
-        fetch('/start', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'started') {
-                    alert('Trading started.');
-                    location.reload();
-                } else {
-                    if (data.message && data.message.includes('User session not found')) {
-                        attemptAutoLogin();
-                    } else {
-                        alert('Error starting trading: ' + data.message);
-                    }
-                }
-            });
-    });
-    {% else %}
-    document.getElementById('stopButton').addEventListener('click', function () {
-        fetch('/stop', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'stopped') {
-                    alert('Trading stopped.');
-                    location.reload();
-                } else {
-                    alert('Error stopping trading: ' + data.message);
-                }
-            });
-    });
-    {% endif %}
-
-    // Logout
-    document.getElementById('logoutButton').addEventListener('click', function () {
-        fetch('/logout', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Clear credentials from localStorage
-                    localStorage.removeItem('userId');
-                    localStorage.removeItem('password');
-                    localStorage.removeItem('totpKey');
-                    location.reload();
-                } else {
-                    alert('Error logging out: ' + data.message);
-                }
-            });
-    });
-
-    // Update quantity/funds label based on fundMode
-    function updateQuantityLabel() {
-        const fundMode = document.getElementById('fundMode').value;
-        const quantityLabel = document.querySelector('label[for="quantity"]');
-        quantityLabel.textContent = 'Enter ' + fundMode.charAt(0).toUpperCase() + fundMode.slice(1) + ':';
-    }
-
-    // Initial update of quantity label
-    updateQuantityLabel();
-
-    // Open Prediction History Modal
-    // Trigger modal without delay
-    document.getElementById('openPredictionHistoryButton').addEventListener('click', function () {
-        const predictionHistoryModal = document.getElementById('predictionHistoryModal');
-        predictionHistoryModal.classList.remove('hidden');
-        predictionHistoryModal.classList.add('open');
-        loadPredictionHistory(1);  // Load first page without delay
-    });
-
-    // Close Prediction History Modal
-    document.getElementById('closePredictionHistoryModal').addEventListener('click', function () {
-        const predictionHistoryModal = document.getElementById('predictionHistoryModal');
-        // Remove open class to trigger close animation
-        predictionHistoryModal.classList.remove('open');
-        // Wait for animation to complete before hiding
-        setTimeout(() => {
-            predictionHistoryModal.classList.add('hidden');
-        }, 300);
-    });
-
-    let currentPredictionPage = 1;
-
-    // Trigger loading of the first page of prediction history
-    loadPredictionHistory(1);
-
-    // Load Prediction History
-    function loadPredictionHistory(page, loadMoreButton, originalButtonText) {
-        fetch('/historical_predictions?page=' + page)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    const predictions = data.predictions;
-                    displayPredictionHistory(predictions, page);
-                } else {
-                    alert('Error fetching prediction history: ' + data.message);
-                }
-                loadMoreButton.disabled = false;
-                loadMoreButton.innerHTML = originalButtonText;
-            });
-    }
-
-    // Display Prediction History
-    function displayPredictionHistory(predictions, page) {
-        const predictionHistoryDiv = document.getElementById('predictionHistory');
-
-        // Clear content only on the first page load
-        if (page === 1) {
-            predictionHistoryDiv.innerHTML = '';
-        }
-
-        if (predictions.length === 0 && page === 1) {
-            predictionHistoryDiv.innerHTML = '<p class="text-center text-gray-600 dark:text-gray-400">No predictions found.</p>';
-            document.getElementById('loadMorePredictionsButton').style.display = 'none';
-            return;
-        }
-
-        // Create table structure if it doesn't exist
-        let table = predictionHistoryDiv.querySelector('table');
-        if (!table) {
-            table = document.createElement('table');
-            table.classList.add('min-w-full', 'bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'rounded-md', 'overflow-hidden');
-            const thead = document.createElement('thead');
-            thead.classList.add('bg-gray-200', 'dark:bg-gray-600');
-            thead.innerHTML = `
-                <tr>
-                    <th class="py-2 px-4 text-left">Prediction Time</th>
-                    <th class="py-2 px-4 text-left">Stock Symbol</th>
-                    <th class="py-2 px-4 text-left">LTP</th>
-                    <th class="py-2 px-4 text-left">Holding Period</th>
-                    <th class="py-2 px-4 text-left">Actions</th>
-                </tr>
-            `;
-            table.appendChild(thead);
-            const tbody = document.createElement('tbody');
-            table.appendChild(tbody);
-            predictionHistoryDiv.appendChild(table);
-        }
-
-        // Populate table rows
-        const tbody = table.querySelector('tbody');
-        predictions.forEach(prediction => {
-            const row = document.createElement('tr');
-            row.classList.add('border-t', 'border-gray-300', 'dark:border-gray-600', 'hover:bg-gray-100', 'dark:hover:bg-gray-600');
-            const ltpValue = prediction.ltp ? parseFloat(prediction.ltp).toFixed(2) : '';
-            row.innerHTML = `
-                <td class="py-2 px-4">${prediction.prediction_time}</td>
-                <td class="py-2 px-4">${prediction.stock_symbol}</td>
-                <td class="py-2 px-4">${ltpValue}</td>
-                <td class="py-2 px-4">${prediction.holding_period} minutes</td>
-                <td class="py-2 px-4">
-                    <button class="chartButton tooltip text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-600 focus:outline-none" data-stock-symbol="${prediction.stock_symbol}" data-prediction-time="${prediction.prediction_time}" data-holding-period="${prediction.holding_period}">
-                        <i class="fas fa-chart-line"></i>
-                        <span class="tooltip-content">View Chart</span>
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
-
-        // Show the load more button only if predictions were returned
-        document.getElementById('loadMorePredictionsButton').style.display = predictions.length > 0 ? 'block' : 'none';
-
-        // Attach event listeners to chart buttons
-        const chartButtons = tbody.querySelectorAll('.chartButton');
-        chartButtons.forEach(button => {
-            button.addEventListener('click', function () {
-                const stockSymbol = this.dataset.stockSymbol;
-                const predictionTime = this.dataset.predictionTime;
-                const holdingPeriod = this.dataset.holdingPeriod;
-                openChartModal(stockSymbol, predictionTime, holdingPeriod);
-            });
-        });
-    }
-
-    // Load More Predictions
-    document.getElementById('loadMorePredictionsButton').addEventListener('click', function () {
-        const loadMoreButton = this;
-        const originalButtonText = loadMoreButton.innerHTML;
-        loadMoreButton.disabled = true;
-        loadMoreButton.innerHTML = 'Loading... <i class="fas fa-circle-notch fa-spin"></i>';
-
-        currentPredictionPage += 1;
-        loadPredictionHistory(currentPredictionPage, loadMoreButton, originalButtonText);
-    });
-
-    // Open Chart Modal and fetch data
-    function openChartModal(stockSymbol, predictionTime, holdingPeriod) {
-        const chartModal = document.getElementById('chartModal');
-        chartModal.classList.remove('hidden');
-        const chartContainer = document.getElementById('chartContainer');
-        chartContainer.innerHTML = '<p class="text-center text-gray-600 dark:text-gray-400">Loading chart...</p>';
-
-        const params = new URLSearchParams({
-            stock_symbol: stockSymbol,
-            prediction_time: predictionTime,
-            holding_period: holdingPeriod
-        });
-        fetch('/prediction_chart_data?' + params.toString())
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    const historicalData = data.data;
-                    plotPredictionChart(historicalData, stockSymbol, predictionTime, holdingPeriod);
-                } else {
-                    chartContainer.innerHTML = '<p class="text-center text-gray-600 dark:text-gray-400">Error loading chart: ' + data.message + '</p>';
-                }
-            });
-    }
-
-    // Close Chart Modal
-    document.getElementById('closeChartModal').addEventListener('click', function () {
-        const chartModal = document.getElementById('chartModal');
-        chartModal.classList.add('hidden');
-    });
-
-    // Plot Prediction Chart using Plotly.js
-    function plotPredictionChart(historicalData, stockSymbol, predictionTime, holdingPeriod) {
-        const chartContainer = document.getElementById('chartContainer');
-        chartContainer.innerHTML = ''; // Clear previous content
-
-        // Create a div element for Plotly
-        const plotDiv = document.createElement('div');
-        plotDiv.id = 'predictionChart';
-        chartContainer.appendChild(plotDiv);
-
-        // Prepare data
-        const dates = [];
-        const opens = [];
-        const highs = [];
-        const lows = [];
-        const closes = [];
-
-        historicalData.forEach(d => {
-            dates.push(d.date);
-            opens.push(d.open);
-            highs.push(d.high);
-            lows.push(d.low);
-            closes.push(d.close);
-        });
-
-        // Create the trace for candlestick chart
-        const trace = {
-            x: dates,
-            open: opens,
-            high: highs,
-            low: lows,
-            close: closes,
-            type: 'candlestick',
-            name: stockSymbol,
-            increasing: { line: { color: 'green' } },
-            decreasing: { line: { color: 'red' } },
-            line: { color: 'black' }
-        };
-
-        const data = [trace];
-
-        const predictionTimestamp = new Date(predictionTime);
-        const endTime = new Date(predictionTimestamp.getTime() + holdingPeriod * 60000);
-
-        // Find the close value at prediction time
-        let predictionClose = null;
-        let endClose = null;
-
-        // Find index of predictionTime
-        let predictionIndex = dates.findIndex(date => new Date(date) >= predictionTimestamp);
-        if (predictionIndex === -1) predictionIndex = 0; // Use first candle if not found
-
-        predictionClose = closes[predictionIndex];
-
-        // Find index of endTime
-        let endIndex = dates.findIndex(date => new Date(date) >= endTime);
-        if (endIndex === -1) endIndex = closes.length - 1; // Use last candle if not found
-
-        endClose = closes[endIndex];
-
-        // Create a line trace from predictionTime to endTime
-        const lineTrace = {
-            x: [dates[predictionIndex], dates[endIndex]],
-            y: [predictionClose, endClose],
-            type: 'scatter',
-            mode: 'lines+markers',
-            name: 'Prediction Line',
-            line: {
-                color: 'orange',
-                width: 2,
-                dash: 'dashdot'
-            },
-            marker: {
-                color: 'orange',
-                size: 6
-            }
-        };
-
-        data.push(lineTrace);
-
-        // Determine the theme
-        const isDarkMode = document.documentElement.classList.contains('dark');
-        const template = isDarkMode ? 'plotly_dark' : 'plotly_white';
-
-        const layout = {
-            title: {
-                text: `Candlestick Chart for ${stockSymbol}`,
-                font: {
-                    family: 'Arial, sans-serif',
-                    size: 24,
-                    color: isDarkMode ? '#ffffff' : '#000000'
-                }
-            },
-            xaxis: {
-                title: 'Time',
-                range: [dates[0], dates[dates.length - 1]],
-                type: 'date',
-                gridcolor: isDarkMode ? '#4a5568' : '#d3d3d3',
-                tickfont: {
-                    family: 'Arial, sans-serif',
-                    size: 12,
-                    color: isDarkMode ? '#ffffff' : '#000000'
-                }
-            },
-            yaxis: {
-                title: 'Price',
-                gridcolor: isDarkMode ? '#4a5568' : '#d3d3d3',
-                tickfont: {
-                    family: 'Arial, sans-serif',
-                    size: 12,
-                    color: isDarkMode ? '#ffffff' : '#000000'
-                }
-            },
-            shapes: [
-                // Line at prediction time
-                {
-                    type: 'line',
-                    x0: predictionTimestamp.toISOString(),
-                    y0: Math.min(...lows),
-                    x1: predictionTimestamp.toISOString(),
-                    y1: Math.max(...highs),
-                    line: {
-                        color: 'red',
-                        width: 2,
-                        dash: 'dashdot'
-                    }
-                },
-                // Line at end time
-                {
-                    type: 'line',
-                    x0: endTime.toISOString(),
-                    y0: Math.min(...lows),
-                    x1: endTime.toISOString(),
-                    y1: Math.max(...highs),
-                    line: {
-                        color: 'green',
-                        width: 2,
-                        dash: 'dashdot'
-                    }
-                }
-            ],
-            template: template,
-            plot_bgcolor: isDarkMode ? '#1a202c' : '#ffffff',
-            paper_bgcolor: isDarkMode ? '#1a202c' : '#ffffff',
-            font: {
-                family: 'Arial, sans-serif',
-                size: 12,
-                color: isDarkMode ? '#ffffff' : '#000000'
-            }
-        };
-
-        Plotly.newPlot('predictionChart', data, layout);
-    }
-
-    // Function to attempt automatic login with cached credentials
-    function attemptAutoLogin() {
-        const userId = localStorage.getItem('userId');
-        const password = localStorage.getItem('password');
-        const totpKey = localStorage.getItem('totpKey');
-
-        if (userId && password && totpKey) {
-            fetch('/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user_id: userId,
-                    password: password,
-                    totp_key: totpKey
-                }),
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        location.reload();
-                    } else {
-                        // Clear cached credentials if login fails
-                        localStorage.removeItem('userId');
-                        localStorage.removeItem('password');
-                        localStorage.removeItem('totpKey');
-                        alert('Automatic login failed: ' + data.message);
-                        // Do not reload the page
-                    }
+                    tbody.appendChild(row);
                 });
+
+                table.appendChild(tbody);
+                tradeHistoryDiv.appendChild(table);
+            }
+
+            // Fetch trade history when the page loads
+            fetchTradeHistory();
+
+            // Attach event listener to refresh trades button
+            document.getElementById('refreshTradesButton').addEventListener('click', fetchTradeHistory);
+
+            // Fetch and update latest prediction
+            function fetchLatestPrediction() {
+                fetch('/latest_prediction')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // For simplicity, reload the page to update the plot
+                            location.reload();
+                        } else {
+                            if (data.message && data.message.includes('User session not found')) {
+                                attemptAutoLogin();
+                            } else {
+                                alert('Error fetching latest prediction: ' + data.message);
+                            }
+                        }
+                    });
+            }
+
+            // Fetch and update current position
+            function fetchCurrentPosition() {
+                fetch('/current_position')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // For simplicity, reload the page to update the position
+                            location.reload();
+                        } else {
+                            if (data.message && data.message.includes('User session not found')) {
+                                attemptAutoLogin();
+                            } else {
+                                alert('Error fetching current position: ' + data.message);
+                            }
+                        }
+                    });
+            }
+
+            // Attach event listeners to refresh buttons
+            document.getElementById('refreshPredictionButton').addEventListener('click', fetchLatestPrediction);
+            document.getElementById('refreshPositionButton').addEventListener('click', fetchCurrentPosition);
+
+            // Start/Stop trading
+            {% if not trading %}
+            document.getElementById('startButton').addEventListener('click', function () {
+                fetch('/start', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'started') {
+                            alert('Trading started.');
+                            location.reload();
+                        } else {
+                            if (data.message && data.message.includes('User session not found')) {
+                                attemptAutoLogin();
+                            } else {
+                                alert('Error starting trading: ' + data.message);
+                            }
+                        }
+                    });
+            });
+            {% else %}
+            document.getElementById('stopButton').addEventListener('click', function () {
+                fetch('/stop', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'stopped') {
+                            alert('Trading stopped.');
+                            location.reload();
+                        } else {
+                            alert('Error stopping trading: ' + data.message);
+                        }
+                    });
+            });
+            {% endif %}
+
+            // Logout
+            document.getElementById('logoutButton').addEventListener('click', function () {
+                fetch('/logout', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Clear credentials from localStorage
+                            localStorage.removeItem('userId');
+                            localStorage.removeItem('password');
+                            localStorage.removeItem('totpKey');
+                            location.reload();
+                        } else {
+                            alert('Error logging out: ' + data.message);
+                        }
+                    });
+            });
+
+            // Update quantity/funds label based on fundMode
+            function updateQuantityLabel() {
+                const fundMode = document.getElementById('fundMode').value;
+                const quantityLabel = document.querySelector('label[for="quantity"]');
+                quantityLabel.textContent = 'Enter ' + fundMode.charAt(0).toUpperCase() + fundMode.slice(1) + ':';
+            }
+
+            // Initial update of quantity label
+            updateQuantityLabel();
+
+            // Open Prediction History Modal
+            // Trigger modal without delay
+            document.getElementById('openPredictionHistoryButton').addEventListener('click', function () {
+                const predictionHistoryModal = document.getElementById('predictionHistoryModal');
+                predictionHistoryModal.classList.remove('hidden');
+                predictionHistoryModal.classList.add('open');
+                loadPredictionHistory(1);  // Load first page without delay
+            });
+
+            // Close Prediction History Modal
+            document.getElementById('closePredictionHistoryModal').addEventListener('click', function () {
+                const predictionHistoryModal = document.getElementById('predictionHistoryModal');
+                // Remove open class to trigger close animation
+                predictionHistoryModal.classList.remove('open');
+                // Wait for animation to complete before hiding
+                setTimeout(() => {
+                    predictionHistoryModal.classList.add('hidden');
+                }, 300);
+            });
+
+            let currentPredictionPage = 1;
+
+            // Trigger loading of the first page of prediction history
+            loadPredictionHistory(1);
+
+            // Load Prediction History
+            function loadPredictionHistory(page, loadMoreButton, originalButtonText) {
+                fetch('/historical_predictions?page=' + page)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const predictions = data.predictions;
+                            displayPredictionHistory(predictions, page);
+                        } else {
+                            alert('Error fetching prediction history: ' + data.message);
+                        }
+                        loadMoreButton.disabled = false;
+                        loadMoreButton.innerHTML = originalButtonText;
+                    });
+            }
+
+            function displayPredictionHistory(predictions, page) {
+    const predictionHistoryDiv = document.getElementById('predictionHistory');
+
+    // Clear content only on the first page load
+    if (page === 1) {
+        predictionHistoryDiv.innerHTML = '';
+    }
+
+    if (predictions.length === 0 && page === 1) {
+        predictionHistoryDiv.innerHTML = '<p class="text-center text-gray-600 dark:text-gray-400">No predictions found.</p>';
+        document.getElementById('loadMorePredictionsButton').style.display = 'none';
+        return;
+    }
+
+    // Create table structure if it doesn't exist
+    let table = predictionHistoryDiv.querySelector('table');
+    if (!table) {
+        table = document.createElement('table');
+        table.classList.add('min-w-full', 'bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'rounded-md', 'overflow-hidden');
+        const thead = document.createElement('thead');
+        thead.classList.add('bg-gray-200', 'dark:bg-gray-600');
+        thead.innerHTML = `
+            <tr>
+                <th class="py-2 px-4 text-left">Prediction Time</th>
+                <th class="py-2 px-4 text-left">Stock Symbol</th>
+                <th class="py-2 px-4 text-left">Enter Price</th>
+                <th class="py-2 px-4 text-left">Exit Price</th>
+                <th class="py-2 px-4 text-left">Gained %</th>
+                <th class="py-2 px-4 text-left">Holding Period</th>
+                <th class="py-2 px-4 text-left">Actions</th>
+            </tr>
+        `;
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        table.appendChild(tbody);
+        predictionHistoryDiv.appendChild(table);
+    }
+
+    // Populate table rows
+    const tbody = table.querySelector('tbody');
+    predictions.forEach(prediction => {
+        const row = document.createElement('tr');
+        row.classList.add('border-t', 'border-gray-300', 'dark:border-gray-600', 'hover:bg-gray-100', 'dark:hover:bg-gray-600');
+
+        const enterPrice = prediction.enter_price ? parseFloat(prediction.enter_price).toFixed(2) : '';
+        const exitPrice = prediction.exit_price ? parseFloat(prediction.exit_price).toFixed(2) : (prediction.temporary_exit_price ? parseFloat(prediction.temporary_exit_price).toFixed(2) : '');
+        const gainedPercent = prediction.gained_percent ? parseFloat(prediction.gained_percent).toFixed(2) : '';
+
+        // Determine row background color based on Gained %
+        if (gainedPercent < 0) {
+            row.classList.add('bg-red-200', 'dark:bg-red-900');
+        } else if (gainedPercent > 0) {
+            row.classList.add('bg-green-200', 'dark:bg-green-900');
         }
-    }
 
-    {% else %}
-    // Code for not logged-in users
-
-    // On page load, attempt auto login if credentials are cached
-    const userId = localStorage.getItem('userId');
-    const password = localStorage.getItem('password');
-    const totpKey = localStorage.getItem('totpKey');
-
-    if (userId && password && totpKey) {
-        // Attempt to login automatically
-        fetch('/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                user_id: userId,
-                password: password,
-                totp_key: totpKey
-            }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    location.reload();
-                } else {
-                    // Clear cached credentials if login fails
-                    localStorage.removeItem('userId');
-                    localStorage.removeItem('password');
-                    localStorage.removeItem('totpKey');
-                    // Do nothing, user can login manually
-                }
-            });
-    }
-
-    // Login form submission
-    document.getElementById('loginForm').addEventListener('submit', function (e) {
-        e.preventDefault();
-        const userIdInput = document.getElementById('userId');
-        const passwordInput = document.getElementById('password');
-        const totpKeyInput = document.getElementById('totpKey');
-        const loginButton = e.target.querySelector('button[type="submit"]');
-
-        // Disable inputs and button
-        userIdInput.disabled = true;
-        passwordInput.disabled = true;
-        totpKeyInput.disabled = true;
-        loginButton.disabled = true;
-        loginButton.innerHTML = 'Logging in... <i class="fas fa-circle-notch fa-spin"></i>';
-
-        const userId = userIdInput.value;
-        const password = passwordInput.value;
-        const totpKey = totpKeyInput.value;
-
-        fetch('/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                user_id: userId,
-                password: password,
-                totp_key: totpKey
-            }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Store credentials in localStorage
-                    localStorage.setItem('userId', userId);
-                    localStorage.setItem('password', password);
-                    localStorage.setItem('totpKey', totpKey);
-                    location.reload();
-                } else {
-                    alert('Error logging in: ' + data.message);
-                    // Re-enable inputs and button
-                    userIdInput.disabled = false;
-                    passwordInput.disabled = false;
-                    totpKeyInput.disabled = false;
-                    loginButton.disabled = false;
-                    loginButton.innerHTML = 'Login';
-                }
-            })
-            .catch(error => {
-                alert('Error logging in: ' + error.message);
-                // Re-enable inputs and button
-                userIdInput.disabled = false;
-                passwordInput.disabled = false;
-                totpKeyInput.disabled = false;
-                loginButton.disabled = false;
-                loginButton.innerHTML = 'Login';
-            });
-
-        gtag_report_conversion('https://hjalgos.hjlabs.in');
+        row.innerHTML = `
+            <td class="py-2 px-4">${prediction.prediction_time}</td>
+            <td class="py-2 px-4">${prediction.stock_symbol}</td>
+            <td class="py-2 px-4">${enterPrice}</td>
+            <td class="py-2 px-4">${exitPrice}</td>
+            <td class="py-2 px-4">${gainedPercent}%</td>
+            <td class="py-2 px-4">${prediction.holding_period} minutes</td>
+            <td class="py-2 px-4">
+                <button class="chartButton tooltip text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-600 focus:outline-none" data-stock-symbol="${prediction.stock_symbol}" data-prediction-time="${prediction.prediction_time}" data-holding-period="${prediction.holding_period}">
+                    <i class="fas fa-chart-line"></i>
+                    <span class="tooltip-content">View Chart</span>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
     });
 
-    {% endif %}
+    // Show the load more button only if predictions were returned
+    document.getElementById('loadMorePredictionsButton').style.display = predictions.length > 0 ? 'block' : 'none';
 
-    // Show the multiple accounts management section for premium users
-    const is_premium = document.getElementById('is_premium');
-    if (is_premium) {
-        document.getElementById('premiumMultipleAccounts').classList.remove('hidden');
-    }
-
-    // Handle form submission to add an extra user
-    document.getElementById('addAccountForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const extraUserId = document.getElementById('extraUserId').value;
-        const extraPassword = document.getElementById('extraPassword').value;
-        const extraTotpKey = document.getElementById('extraTotpKey').value;
-
-        fetch('/add_extra_user', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                extra_user_id: extraUserId,
-                extra_password: extraPassword,
-                extra_totp_key: extraTotpKey
-            }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert('Extra user added successfully.');
-                loadExtraUsers();
-            } else {
-                alert('Error adding extra user: ' + data.message);
-            }
+    // Attach event listeners to chart buttons
+    const chartButtons = tbody.querySelectorAll('.chartButton');
+    chartButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const stockSymbol = this.dataset.stockSymbol;
+            const predictionTime = this.dataset.predictionTime;
+            const holdingPeriod = this.dataset.holdingPeriod;
+            openChartModal(stockSymbol, predictionTime, holdingPeriod);
         });
     });
+}
 
-    // Load extra users for the current premium user
-    function loadExtraUsers() {
-        fetch('/extra_users')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                const extraUsersContainer = document.getElementById('extraUsersContainer');
-                extraUsersContainer.innerHTML = '';
+            // Load More Predictions
+            document.getElementById('loadMorePredictionsButton').addEventListener('click', function () {
+                const loadMoreButton = this;
+                const originalButtonText = loadMoreButton.innerHTML;
+                loadMoreButton.disabled = true;
+                loadMoreButton.innerHTML = 'Loading... <i class="fas fa-circle-notch fa-spin"></i>';
 
-                data.extra_users.forEach(extraUser => {
-                    const extraUserCard = document.createElement('div');
-                    extraUserCard.classList.add('bg-white', 'dark:bg-gray-800', 'p-6', 'rounded-md', 'shadow');
-                    extraUserCard.innerHTML = `
+                currentPredictionPage += 1;
+                loadPredictionHistory(currentPredictionPage, loadMoreButton, originalButtonText);
+            });
+
+            // Open Chart Modal and fetch data
+            function openChartModal(stockSymbol, predictionTime, holdingPeriod) {
+                const chartModal = document.getElementById('chartModal');
+                chartModal.classList.remove('hidden');
+                const chartContainer = document.getElementById('chartContainer');
+                chartContainer.innerHTML = '<p class="text-center text-gray-600 dark:text-gray-400">Loading chart...</p>';
+
+                const params = new URLSearchParams({
+                    stock_symbol: stockSymbol,
+                    prediction_time: predictionTime,
+                    holding_period: holdingPeriod
+                });
+                fetch('/prediction_chart_data?' + params.toString())
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const historicalData = data.data;
+                            plotPredictionChart(historicalData, stockSymbol, predictionTime, holdingPeriod);
+                        } else {
+                            chartContainer.innerHTML = '<p class="text-center text-gray-600 dark:text-gray-400">Error loading chart: ' + data.message + '</p>';
+                        }
+                    });
+            }
+
+            // Close Chart Modal
+            document.getElementById('closeChartModal').addEventListener('click', function () {
+                const chartModal = document.getElementById('chartModal');
+                chartModal.classList.add('hidden');
+            });
+
+            // Plot Prediction Chart using Plotly.js
+            function plotPredictionChart(historicalData, stockSymbol, predictionTime, holdingPeriod) {
+                const chartContainer = document.getElementById('chartContainer');
+                chartContainer.innerHTML = ''; // Clear previous content
+
+                // Create a div element for Plotly
+                const plotDiv = document.createElement('div');
+                plotDiv.id = 'predictionChart';
+                chartContainer.appendChild(plotDiv);
+
+                // Prepare data
+                const dates = [];
+                const opens = [];
+                const highs = [];
+                const lows = [];
+                const closes = [];
+
+                historicalData.forEach(d => {
+                    dates.push(d.date);
+                    opens.push(d.open);
+                    highs.push(d.high);
+                    lows.push(d.low);
+                    closes.push(d.close);
+                });
+
+                // Create the trace for candlestick chart
+                const trace = {
+                    x: dates,
+                    open: opens,
+                    high: highs,
+                    low: lows,
+                    close: closes,
+                    type: 'candlestick',
+                    name: stockSymbol,
+                    increasing: { line: { color: 'green' } },
+                    decreasing: { line: { color: 'red' } },
+                    line: { color: 'black' }
+                };
+
+                const data = [trace];
+
+                const predictionTimestamp = new Date(predictionTime);
+                const endTime = new Date(predictionTimestamp.getTime() + holdingPeriod * 60000);
+
+                // Find the close value at prediction time
+                let predictionClose = null;
+                let endClose = null;
+
+                // Find index of predictionTime
+                let predictionIndex = dates.findIndex(date => new Date(date) >= predictionTimestamp);
+                if (predictionIndex === -1) predictionIndex = 0; // Use first candle if not found
+
+                predictionClose = closes[predictionIndex];
+
+                // Find index of endTime
+                let endIndex = dates.findIndex(date => new Date(date) >= endTime);
+                if (endIndex === -1) endIndex = closes.length - 1; // Use last candle if not found
+
+                endClose = closes[endIndex];
+
+                // Create a line trace from predictionTime to endTime
+                const lineTrace = {
+                    x: [dates[predictionIndex], dates[endIndex]],
+                    y: [predictionClose, endClose],
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Prediction Line',
+                    line: {
+                        color: 'orange',
+                        width: 2,
+                        dash: 'dashdot'
+                    },
+                    marker: {
+                        color: 'orange',
+                        size: 6
+                    }
+                };
+
+                data.push(lineTrace);
+
+                // Determine the theme
+                const isDarkMode = document.documentElement.classList.contains('dark');
+                const template = isDarkMode ? 'plotly_dark' : 'plotly_white';
+
+                const layout = {
+                    title: {
+                        text: `Candlestick Chart for ${stockSymbol}`,
+                        font: {
+                            family: 'Arial, sans-serif',
+                            size: 24,
+                            color: isDarkMode ? '#ffffff' : '#000000'
+                        }
+                    },
+                    xaxis: {
+                        title: 'Time',
+                        range: [dates[0], dates[dates.length - 1]],
+                        type: 'date',
+                        gridcolor: isDarkMode ? '#4a5568' : '#d3d3d3',
+                        tickfont: {
+                            family: 'Arial, sans-serif',
+                            size: 12,
+                            color: isDarkMode ? '#ffffff' : '#000000'
+                        }
+                    },
+                    yaxis: {
+                        title: 'Price',
+                        gridcolor: isDarkMode ? '#4a5568' : '#d3d3d3',
+                        tickfont: {
+                            family: 'Arial, sans-serif',
+                            size: 12,
+                            color: isDarkMode ? '#ffffff' : '#000000'
+                        }
+                    },
+                    shapes: [
+                        // Line at prediction time
+                        {
+                            type: 'line',
+                            x0: predictionTimestamp.toISOString(),
+                            y0: Math.min(...lows),
+                            x1: predictionTimestamp.toISOString(),
+                            y1: Math.max(...highs),
+                            line: {
+                                color: 'red',
+                                width: 2,
+                                dash: 'dashdot'
+                            }
+                        },
+                        // Line at end time
+                        {
+                            type: 'line',
+                            x0: endTime.toISOString(),
+                            y0: Math.min(...lows),
+                            x1: endTime.toISOString(),
+                            y1: Math.max(...highs),
+                            line: {
+                                color: 'green',
+                                width: 2,
+                                dash: 'dashdot'
+                            }
+                        }
+                    ],
+                    template: template,
+                    plot_bgcolor: isDarkMode ? '#1a202c' : '#ffffff',
+                    paper_bgcolor: isDarkMode ? '#1a202c' : '#ffffff',
+                    font: {
+                        family: 'Arial, sans-serif',
+                        size: 12,
+                        color: isDarkMode ? '#ffffff' : '#000000'
+                    }
+                };
+
+                Plotly.newPlot('predictionChart', data, layout);
+            }
+
+            // Function to attempt automatic login with cached credentials
+            function attemptAutoLogin() {
+                const userId = localStorage.getItem('userId');
+                const password = localStorage.getItem('password');
+                const totpKey = localStorage.getItem('totpKey');
+
+                if (userId && password && totpKey) {
+                    fetch('/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            password: password,
+                            totp_key: totpKey
+                        }),
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                location.reload();
+                            } else {
+                                // Clear cached credentials if login fails
+                                localStorage.removeItem('userId');
+                                localStorage.removeItem('password');
+                                localStorage.removeItem('totpKey');
+                                alert('Automatic login failed: ' + data.message);
+                                // Do not reload the page
+                            }
+                        });
+                }
+            }
+
+            {% else %}
+            // Code for not logged-in users
+
+            // On page load, attempt auto login if credentials are cached
+            const userId = localStorage.getItem('userId');
+            const password = localStorage.getItem('password');
+            const totpKey = localStorage.getItem('totpKey');
+
+            if (userId && password && totpKey) {
+                // Attempt to login automatically
+                fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        password: password,
+                        totp_key: totpKey
+                    }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            location.reload();
+                        } else {
+                            // Clear cached credentials if login fails
+                            localStorage.removeItem('userId');
+                            localStorage.removeItem('password');
+                            localStorage.removeItem('totpKey');
+                            // Do nothing, user can login manually
+                        }
+                    });
+            }
+
+            // Login form submission
+            document.getElementById('loginForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const userIdInput = document.getElementById('userId');
+                const passwordInput = document.getElementById('password');
+                const totpKeyInput = document.getElementById('totpKey');
+                const loginButton = e.target.querySelector('button[type="submit"]');
+
+                // Disable inputs and button
+                userIdInput.disabled = true;
+                passwordInput.disabled = true;
+                totpKeyInput.disabled = true;
+                loginButton.disabled = true;
+                loginButton.innerHTML = 'Logging in... <i class="fas fa-circle-notch fa-spin"></i>';
+
+                const userId = userIdInput.value;
+                const password = passwordInput.value;
+                const totpKey = totpKeyInput.value;
+
+                fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        password: password,
+                        totp_key: totpKey
+                    }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Store credentials in localStorage
+                            localStorage.setItem('userId', userId);
+                            localStorage.setItem('password', password);
+                            localStorage.setItem('totpKey', totpKey);
+                            location.reload();
+                        } else {
+                            alert('Error logging in: ' + data.message);
+                            // Re-enable inputs and button
+                            userIdInput.disabled = false;
+                            passwordInput.disabled = false;
+                            totpKeyInput.disabled = false;
+                            loginButton.disabled = false;
+                            loginButton.innerHTML = 'Login';
+                        }
+                    })
+                    .catch(error => {
+                        alert('Error logging in: ' + error.message);
+                        // Re-enable inputs and button
+                        userIdInput.disabled = false;
+                        passwordInput.disabled = false;
+                        totpKeyInput.disabled = false;
+                        loginButton.disabled = false;
+                        loginButton.innerHTML = 'Login';
+                    });
+
+                gtag_report_conversion('https://hjalgos.hjlabs.in');
+            });
+
+            {% endif %}
+
+            // Show the multiple accounts management section for premium users
+            const is_premium = document.getElementById('is_premium');
+            if (is_premium) {
+                document.getElementById('premiumMultipleAccounts').classList.remove('hidden');
+            }
+
+            // Handle form submission to add an extra user
+            document.getElementById('addAccountForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const extraUserId = document.getElementById('extraUserId').value;
+                const extraPassword = document.getElementById('extraPassword').value;
+                const extraTotpKey = document.getElementById('extraTotpKey').value;
+
+                fetch('/add_extra_user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        extra_user_id: extraUserId,
+                        extra_password: extraPassword,
+                        extra_totp_key: extraTotpKey
+                    }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            alert('Extra user added successfully.');
+                            loadExtraUsers();
+                        } else {
+                            alert('Error adding extra user: ' + data.message);
+                        }
+                    });
+            });
+
+            // Load extra users for the current premium user
+
+            function loadExtraUsers() {
+                fetch('/extra_users')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const extraUsersContainer = document.getElementById('extraUsersContainer');
+                            extraUsersContainer.innerHTML = '';
+
+                            data.extra_users.forEach(extraUser => {
+                                const extraUserCard = document.createElement('div');
+                                extraUserCard.classList.add('bg-white', 'dark:bg-gray-800', 'p-6', 'rounded-md', 'shadow');
+                                extraUserCard.innerHTML = `
                         <h3 class="text-lg font-semibold mb-2">${extraUser.user_id}</h3>
                         <p>Available Funds: ₹${extraUser.available_funds}</p>
                         <p>Trading Mode: ${extraUser.fund_mode}</p>
@@ -1293,69 +1355,81 @@ document.addEventListener('DOMContentLoaded', function() {
                         <button class="startTradingButton" data-user-id="${extraUser.user_id}">Start Trading</button>
                         <button class="deleteUserButton" data-user-id="${extraUser.user_id}">Delete</button>
                     `;
-                    extraUsersContainer.appendChild(extraUserCard);
+                                extraUsersContainer.appendChild(extraUserCard);
 
-                    // Attach event listeners to buttons
-                    extraUserCard.querySelector('.startTradingButton').addEventListener('click', function() {
-                        const extraUserId = this.dataset.userId;
-                        fetch('/start_extra_user_trading', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                extra_user_id: extraUserId
-                            }),
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.status === 'success') {
-                                alert('Trading started for extra user.');
-                            } else {
-                                alert('Error starting trading for extra user: ' + data.message);
-                            }
-                        });
-                    });
+                                // Attach event listeners to buttons
+                                extraUserCard.querySelector('.startTradingButton').addEventListener('click', function () {
+                                    const extraUserId = this.dataset.userId;
+                                    fetch('/start_extra_user_trading', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            extra_user_id: extraUserId
+                                        }),
+                                    })
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            if (data.status === 'success') {
+                                                alert('Trading started for extra user.');
+                                            } else {
+                                                alert('Error starting trading for extra user: ' + data.message);
+                                            }
+                                        });
+                                });
 
-                    extraUserCard.querySelector('.deleteUserButton').addEventListener('click', function() {
-                        const extraUserId = this.dataset.userId;
-                        fetch('/delete_extra_user', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                extra_user_id: extraUserId
-                            }),
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.status === 'success') {
-                                alert('Extra user deleted successfully.');
-                                loadExtraUsers();
-                            } else {
-                                alert('Error deleting extra user: ' + data.message);
-                            }
-                        });
+                                extraUserCard.querySelector('.deleteUserButton').addEventListener('click', function () {
+                                    const extraUserId = this.dataset.userId;
+                                    fetch('/delete_extra_user', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            extra_user_id: extraUserId
+                                        }),
+                                    })
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            if (data.status === 'success') {
+                                                alert('Extra user deleted successfully.');
+                                                loadExtraUsers();
+                                            } else {
+                                                alert('Error deleting extra user: ' + data.message);
+                                            }
+                                        });
+                                });
+                            });
+                        } else {
+                            alert('Error fetching extra users: ' + data.message);
+                        }
                     });
-                });
-            } else {
-                alert('Error fetching extra users: ' + data.message);
             }
+
+
+            // Open Explanation Modal
+            document.getElementById('openExplanationModal').addEventListener('click', function () {
+                const explanationModal = document.getElementById('explanationModal');
+                explanationModal.classList.remove('hidden');
+            });
+
+            // Close Explanation Modal
+            document.getElementById('closeExplanationModal').addEventListener('click', function () {
+                const explanationModal = document.getElementById('explanationModal');
+                explanationModal.classList.add('hidden');
+            });
+
+
+            checkUserLoggedIn();
+            // Load extra users on page load
+            loadExtraUsers();
         });
-    }
-
-    // Load extra users on page load
-    loadExtraUsers();
-});
-
-
 
     </script>
 </body>
 
 </html>
-
 
 
 
