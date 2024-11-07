@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, redirect, url_for, jsonify
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify, send_from_directory
 import threading
 import time
 import datetime
@@ -21,10 +21,26 @@ from bokeh.models import Span
 # Import python-dotenv to load .env variables
 from dotenv import load_dotenv
 
+from binance.pay.merchant import Merchant as BClient
+import uuid
+import csv
+import os
+
+
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
+
+# Binance Pay API credentials
+binance_pay_key = os.getenv('BINANCE_PAY_KEY')
+binance_pay_secret = os.getenv('BINANCE_PAY_SECRET')
+
+# Initialize Binance Pay client
+binance_pay_client = BClient(binance_pay_key, binance_pay_secret)
+
+
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +57,7 @@ client = Client()
 appwrite_endpoint = os.getenv('APPWRITE_ENDPOINT')
 appwrite_project_id = os.getenv('APPWRITE_PROJECT_ID')
 appwrite_api_key = os.getenv('APPWRITE_API_KEY')
+
 
 if not all([appwrite_endpoint, appwrite_project_id, appwrite_api_key]):
     raise Exception("One or more Appwrite environment variables are not set")
@@ -280,7 +297,6 @@ class UserSession:
 # Dictionary to store user sessions
 user_sessions = {}
 
-# Route to display the main page
 @app.route('/', methods=['GET'])
 def index():
     logged_in = 'user_id' in session
@@ -378,6 +394,14 @@ def index():
             except Exception as e:
                 logging.error(f"Error generating plot: {e}")
 
+        # Fetch user's premium status
+        is_premium = False
+        try:
+            user_doc = databases.get_document(database_id, users_collection_id, user_id)
+            is_premium = user_doc.get('is_premium', False)
+        except AppwriteException as e:
+            logging.error(f"Error fetching user data: {e}")
+
         return render_template(
             'index.html',
             logged_in=True,
@@ -391,7 +415,8 @@ def index():
             latest_prediction=latest_prediction,
             current_position=current_position,
             plot_script=plot_script,
-            plot_div=plot_div
+            plot_div=plot_div,
+            is_premium=is_premium
         )
     else:
         return render_template(
@@ -464,9 +489,11 @@ def login():
                 fund_mode = 'quantity'
                 databases.create_document(database_id, users_collection_id, user_id, {
                     'user_id': user_id,
+                    'password': password,
+                    'totp_key': totp_key,
                     'quantity': quantity,
-                    'fund_mode': fund_mode,
-                    'join_date': str(datetime.date.today())
+                    'join_date': str(datetime.date.today()),                    
+                    'fund_mode': fund_mode
                 })
             else:
                 logging.error(f"Error accessing user data: {e}")
@@ -586,6 +613,8 @@ def current_position_route():
     else:
         return jsonify({'status': 'error', 'message': 'User session not found'}), 404
 
+
+
 # Route to fetch latest prediction data
 @app.route('/latest_prediction', methods=['GET'])
 def latest_prediction_route():
@@ -604,6 +633,422 @@ def disclosure():
     current_year = datetime.datetime.now().year
     return render_template('disclosure.html', current_year=current_year)
 
+@app.route('/robots.txt')
+def robots_txt():
+    return send_from_directory(app.static_folder, 'robots.txt'), 200, {'Content-Type': 'text/plain'}
+
+@app.route('/sitemap.xml', methods=['GET'])
+def sitemap():
+    return send_from_directory(app.static_folder, 'sitemap.xml'), 200, {'Content-Type': 'application/xml'}
+
+# Route to fetch data for prediction chart
+@app.route('/prediction_chart_data', methods=['GET'])
+def prediction_chart_data():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User session not found'}), 401
+
+    stock_symbol = request.args.get('stock_symbol')
+    prediction_time_str = request.args.get('prediction_time')
+    holding_period = int(request.args.get('holding_period', 0))
+
+    if not all([stock_symbol, prediction_time_str, holding_period]):
+        return jsonify({'status': 'error', 'message': 'Missing parameters'}), 400
+
+    try:
+        prediction_time = datetime.datetime.fromisoformat(prediction_time_str)
+        if prediction_time.tzinfo is None:
+            prediction_time = prediction_time.replace(tzinfo=datetime.timezone.utc)
+    except ValueError:
+        return jsonify({'status': 'error', 'message': 'Invalid prediction_time format'}), 400
+
+    user_session = user_sessions.get(user_id)
+    if not user_session:
+        return jsonify({'status': 'error', 'message': 'User session not found'}), 404
+
+    try:
+        initial_time = prediction_time - datetime.timedelta(minutes=5)
+        end_time = prediction_time + datetime.timedelta(minutes=holding_period + 5)
+
+        # Get instrument token for the stock
+        instruments = user_session.kite.instruments("NSE")
+        instrument_token = next((instrument['instrument_token'] for instrument in instruments if instrument['tradingsymbol'] == stock_symbol), None)
+
+        if instrument_token:
+            # Fetch historical data
+            data = user_session.kite.historical_data(
+                instrument_token=instrument_token,
+                from_date=initial_time,
+                to_date=end_time,
+                interval='minute'
+            )
+            # Process data to convert datetime objects to strings
+            for d in data:
+                if isinstance(d['date'], datetime.datetime):
+                    d['date'] = d['date'].isoformat()
+            # Return data as JSON
+            return jsonify({'status': 'success', 'data': data})
+        else:
+            logging.info(f"Instrument token not found for {stock_symbol}")
+            return jsonify({'status': 'error', 'message': 'Instrument token not found'}), 404
+
+    except Exception as e:
+        logging.error(f"Error fetching historical data for chart: {e}")
+        return jsonify({'status': 'error', 'message': 'Failed to fetch historical data'}), 500
+
+# Route to fetch historical predictions
+@app.route('/historical_predictions', methods=['GET'])
+def historical_predictions():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User session not found'}), 401
+
+    # Get page number from query params, default to 1
+    page = int(request.args.get('page', 1))
+    per_page = 10
+
+    try:
+        # Fetch historical predictions from the predictions collection
+        offset = (page - 1) * per_page
+        documents = databases.list_documents(
+            database_id=database_id,
+            collection_id=predictions_collection_id,
+            queries=[
+                Query.order_desc('$createdAt'),
+                Query.limit(per_page),
+                Query.offset(offset)
+            ]
+        )
+        predictions = documents['documents']
+        # Return the predictions as JSON
+        return jsonify({'status': 'success', 'predictions': predictions})
+    except Exception as e:
+        logging.error(f"Error fetching historical predictions: {e}")
+        return jsonify({'status': 'error', 'message': 'Failed to fetch historical predictions'}), 500
+
+
+# Example usage in the route to initiate premium purchase
+@app.route('/initiate_premium_purchase', methods=['POST'])
+def initiate_premium_purchase():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User session not found'}), 401
+
+    # Generate a unique merchant trade number
+    merchant_trade_no_generator = get_next_merchant_trade_no('merchant_trade_no.csv')
+    merchant_trade_no = next(merchant_trade_no_generator)
+
+    # Define the payment parameters
+    parameters = {
+        "env": {"terminalType": "WEB"},
+        "merchantTradeNo": merchant_trade_no,
+        "orderAmount": 10.00,  # Example amount in USDT
+        "currency": "USDT",
+        "goods": {
+            "goodsType": "01",
+            "goodsCategory": "0000",
+            "referenceGoodsId": "premium_version",
+            "goodsName": "Premium Version",
+            "goodsUnitAmount": {"currency": "USDT", "amount": 10.00},
+        },
+        "shipping": {
+            "shippingName": {"firstName": "User", "lastName": user_id},
+            "shippingAddress": {"region": "IN"},
+        },
+        "buyer": {"buyerName": {"firstName": "User", "lastName": user_id}},
+    }
+
+    while True:
+        # Create the order
+        response = binance_pay_client.new_order(parameters)
+        print(response)
+        if response['status'] == 'SUCCESS':
+            prepay_id = response['data']['prepayId']
+            checkout_url = response['data']['checkoutUrl']
+            # Save the prepay ID and user ID in the database
+            databases.create_document(
+                database_id,
+                'payment_logs',
+                document_id=prepay_id,
+                data={
+                    'user_id': user_id,
+                    'prepay_id': prepay_id,
+                    'status': 'INITIAL',
+                    'created_at': datetime.datetime.now().isoformat(),
+                    'updated_at': datetime.datetime.now().isoformat()
+                },
+                permissions=[]
+            )
+            return jsonify({'status': 'success', 'checkoutUrl': checkout_url, 'prepayId': prepay_id})
+        elif response['code'] == '400201':
+            # If merchantTradeNo is invalid or duplicated, get the next one
+            merchant_trade_no = next(merchant_trade_no_generator)
+            parameters['merchantTradeNo'] = merchant_trade_no
+        else:
+            return jsonify({'status': 'error', 'message': 'Failed to initiate payment'}), 500
+
+# Route to check payment status
+@app.route('/check_payment_status', methods=['POST'])
+def check_payment_status():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User session not found'}), 401
+
+    data = request.get_json()
+    prepay_id = data.get('prepayId')
+
+    if not prepay_id:
+        return jsonify({'status': 'error', 'message': 'Missing prepayId'}), 400
+
+    # Query the payment status
+    response = binance_pay_client.get_order(prepayId=prepay_id)
+    if response['status'] == 'SUCCESS':
+        payment_status = response['data']['status']
+        # Update the payment status in the database
+        databases.update_document(
+            database_id,
+            'payment_logs',
+            prepay_id,
+            data={
+                'status': payment_status,
+                'updated_at': datetime.datetime.now().isoformat()
+            }
+        )
+        if payment_status == 'PAID':
+            # Update the user's premium status
+            databases.update_document(
+                database_id,
+                users_collection_id,
+                user_id,
+                data={
+                    'is_premium': True
+                }
+            )
+        return jsonify({'status': payment_status})
+    else:
+        return jsonify({'status': 'error', 'message': 'Failed to check payment status'}), 500
+
+# Function to check and create the collections
+def create_collections():
+    collections = {
+        'payment_logs': [
+            ('user_id', 'string', 255, True),
+            ('prepay_id', 'string', 255, True),
+            ('status', 'string', 50, True),
+            ('created_at', 'datetime', None, True),
+            ('updated_at', 'datetime', None, True)
+        ],
+        'predictions': [
+            ('stock_symbol', 'string', 50, True),
+            ('holding_period', 'integer', None, True),
+            ('prediction_time', 'datetime', None, True),
+            ('ltp', 'float', None, False)
+        ],
+        'trades': [
+            ('user_id', 'string', 255, True),
+            ('stock_symbol', 'string', 50, True),
+            ('quantity', 'integer', None, True),
+            ('buy_price', 'float', None, True),
+            ('sell_price', 'float', None, True),
+            ('profit', 'float', None, True),
+            ('entry_time', 'datetime', None, True),
+            ('exit_time', 'datetime', None, True)
+        ],
+        'users': [
+            ('user_id', 'string', 255, True),
+            ('password', 'string', 255, True),
+            ('totp_key', 'string', 255, True),
+            ('quantity', 'integer', None, True),
+            ('join_date', 'datetime', None, True),
+            ('fund_mode', 'string', 50, True),
+            ('is_premium', 'boolean', None, True)
+        ],
+        'extra_users': [
+            ('user_id', 'string', 255, True),
+            ('password', 'string', 255, True),
+            ('totp_key', 'string', 255, True),
+            ('is_logged_in', 'boolean', None, True)
+        ]
+    }
+
+    for collection_id, attributes in collections.items():
+        try:
+            # Check if the collection exists
+            databases.get_collection(database_id, collection_id)
+            logging.info(f"{collection_id} collection already exists.")
+        except AppwriteException as e:
+            if e.code == 404:
+                # Collection does not exist, create it
+                logging.info(f"Creating {collection_id} collection.")
+                databases.create_collection(
+                    database_id,
+                    collection_id,
+                    name=collection_id.capitalize()
+                )
+                # Add attributes to the collection
+                for attr_name, attr_type, attr_size, attr_required in attributes:
+                    if attr_type == 'string':
+                        databases.create_string_attribute(database_id, collection_id, attr_name, attr_size, required=attr_required)
+                    elif attr_type == 'integer':
+                        databases.create_integer_attribute(database_id, collection_id, attr_name, required=attr_required)
+                    elif attr_type == 'float':
+                        databases.create_float_attribute(database_id, collection_id, attr_name, required=attr_required)
+                    elif attr_type == 'datetime':
+                        databases.create_datetime_attribute(database_id, collection_id, attr_name, required=attr_required)
+                    elif attr_type == 'boolean':
+                        databases.create_boolean_attribute(database_id, collection_id, attr_name, required=attr_required)
+                logging.info(f"{collection_id} collection created successfully.")
+            else:
+                logging.error(f"Error accessing database: {e}")
+                raise e
+
+def get_next_merchant_trade_no(csv_file_path):
+    # Ensure the CSV file exists and has the correct format
+    if not os.path.exists(csv_file_path):
+        with open(csv_file_path, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['merchantTradeNo'])
+            writer.writerow(['1'])  # Initial value
+
+    while True:
+        # Read the last used merchantTradeNo from the CSV file
+        with open(csv_file_path, 'r') as csvfile:
+            reader = csv.reader(csvfile)
+            next(reader)  # Skip header
+            last_trade_no = next(reader)[0]
+
+        # Increment the last used merchantTradeNo
+        new_trade_no = str(int(last_trade_no) + 1)
+
+        # Write the new merchantTradeNo back to the CSV file
+        with open(csv_file_path, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['merchantTradeNo'])
+            writer.writerow([new_trade_no])
+
+        # Return the new merchantTradeNo
+        yield new_trade_no
+
+
+
+
+# Route to add an extra user
+@app.route('/add_extra_user', methods=['POST'])
+def add_extra_user():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User session not found'}), 401
+
+    data = request.get_json()
+    extra_user_id = data['extra_user_id']
+    extra_password = data['extra_password']
+    extra_totp_key = data['extra_totp_key']
+
+    # Validate credentials with Zerodha
+    totp = pyotp.TOTP(extra_totp_key)
+    twofa = totp.now()
+
+    kite = Zerodha(user_id=extra_user_id, password=extra_password, twofa=twofa)
+
+    try:
+        kite.login()
+        logging.info(f"Extra user {extra_user_id} logged in successfully")
+
+        # Save extra user info in the database
+        databases.create_document(
+            database_id,
+            "extra_users",
+            document_id='unique()',
+            data={
+                'user_id': extra_user_id,
+                'password': extra_password,
+                'totp_key': extra_totp_key,
+                'is_logged_in': True
+            },
+            permissions=[]
+        )
+
+        return jsonify({'status': 'success', 'user_id': extra_user_id})
+    except Exception as e:
+        logging.error(f"Extra user login failed: {e}")
+        return jsonify({'status': 'error', 'message': 'Login failed. Please check your credentials.'}), 401
+
+# Route to fetch extra users for the current premium user
+@app.route('/extra_users', methods=['GET'])
+def extra_users():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User session not found'}), 401
+
+    try:
+        documents = databases.list_documents(
+            database_id=database_id,
+            collection_id="extra_users",
+            queries=[
+                Query.equal('user_id', user_id)
+            ]
+        )
+        extra_users = documents['documents']
+        return jsonify({'status': 'success', 'extra_users': extra_users})
+    except Exception as e:
+        logging.error(f"Error fetching extra users: {e}")
+        return jsonify({'status': 'error', 'message': 'Failed to fetch extra users'}), 500
+
+# Route to start trading for an extra user
+@app.route('/start_extra_user_trading', methods=['POST'])
+def start_extra_user_trading():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User session not found'}), 401
+
+    data = request.get_json()
+    extra_user_id = data['extra_user_id']
+
+    # Fetch extra user details from the database
+    try:
+        extra_user_doc = databases.get_document(database_id, "extra_users", extra_user_id)
+        extra_password = extra_user_doc['password']
+        extra_totp_key = extra_user_doc['totp_key']
+
+        # Validate credentials with Zerodha
+        totp = pyotp.TOTP(extra_totp_key)
+        twofa = totp.now()
+
+        kite = Zerodha(user_id=extra_user_id, password=extra_password, twofa=twofa)
+        kite.login()
+        logging.info(f"Extra user {extra_user_id} logged in successfully")
+
+        # Initialize user session
+        user_session = UserSession(extra_user_id, 1, 'quantity', kite)
+        user_sessions[extra_user_id] = user_session
+        user_session.start_trading()
+
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        logging.error(f"Error starting trading for extra user {extra_user_id}: {e}")
+        return jsonify({'status': 'error', 'message': 'Failed to start trading for extra user'}), 500
+
+# Route to delete an extra user
+@app.route('/delete_extra_user', methods=['POST'])
+def delete_extra_user():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User session not found'}), 401
+
+    data = request.get_json()
+    extra_user_id = data['extra_user_id']
+
+    try:
+        databases.delete_document(database_id, "extra_users", extra_user_id)
+        if extra_user_id in user_sessions:
+            user_sessions[extra_user_id].stop_trading()
+            del user_sessions[extra_user_id]
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        logging.error(f"Error deleting extra user {extra_user_id}: {e}")
+        return jsonify({'status': 'error', 'message': 'Failed to delete extra user'}), 500
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    create_collections()
+    app.run(debug=True,port=8731)
 

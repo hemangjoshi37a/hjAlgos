@@ -4,7 +4,6 @@ import os
 import time
 import datetime
 import pandas as pd
-from tqdm import tqdm
 import numpy as np
 from jugaad_trader import Zerodha
 import pyotp
@@ -13,8 +12,6 @@ from appwrite.services.databases import Databases
 from appwrite.exception import AppwriteException
 import math
 import torch.nn as nn
-
-# Import python-dotenv to load .env variables
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -148,8 +145,9 @@ def save_prediction_to_db(databases, prediction):
             data={
                 'stock_symbol': prediction['predicted_stock'],
                 'holding_period': prediction['holding_period'],
-                'user_id': 'AB1234',  # Consider loading this from .env or context if dynamic
-                'prediction_time': prediction['last_candle_time']
+                'user_id': 'FC5917',  # Consider loading this from .env or context if dynamic
+                'prediction_time': prediction['last_candle_time'],
+                'ltp': prediction['ltp']  # Include the ltp value
             },
             permissions=[]
         )
@@ -260,11 +258,22 @@ def run_inference(model, kite, symbol_token_map, nifty50_symbols, databases, loo
                 predicted_stock = nifty50_symbols[predicted_x]
                 holding_period = predicted_y + 1
 
-                # Save prediction to Appwrite with last candle time
+                # Get the ltp value (close price of the last candle) for the predicted stock
+                df_predicted_stock = data_dict[predicted_stock]
+                last_candle_date = common_dates[-1]
+
+                df_last_candle = df_predicted_stock[df_predicted_stock['date'] == last_candle_date]
+                if not df_last_candle.empty:
+                    ltp = df_last_candle['close'].iloc[0]
+                else:
+                    ltp = None  # Handle case where data is missing
+
+                # Save prediction to Appwrite with last candle time and ltp
                 prediction = {
                     'last_candle_time': last_candle_time,
                     'predicted_stock': predicted_stock,
-                    'holding_period': holding_period
+                    'holding_period': holding_period,
+                    'ltp': ltp  # Include ltp in the prediction dictionary
                 }
                 save_prediction_to_db(databases, prediction)
 

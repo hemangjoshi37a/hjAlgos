@@ -1,0 +1,23 @@
+# robots.txt for hjAlgos Web Application
+
+# Allow all well-behaved web crawlers access to the main pages and static assets
+User-agent: *
+# Disallow access to sensitive API endpoints
+Disallow: /login
+Disallow: /logout
+Disallow: /start
+Disallow: /stop
+Disallow: /update_quantity
+Disallow: /trade_history
+Disallow: /current_position
+Disallow: /latest_prediction
+
+# Allow access to static resources (CSS, JS, Images)
+Allow: /static/
+
+# Allow access to public informational pages
+Allow: /disclosure
+Allow: /backtest
+
+# Optional: Specify the location of the sitemap (if you have one)
+# Sitemap: https://yourdomain.com/sitemap.xml
