@@ -20,4 +20,4 @@ Allow: /disclosure
 Allow: /backtest
 
 # Optional: Specify the location of the sitemap (if you have one)
-# Sitemap: https://yourdomain.com/sitemap.xml
+Sitemap: https://hjalgos.hjlabs.in/sitemap.xml

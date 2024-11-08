@@ -3,13 +3,49 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>hjAlgos</title>
+    <title>hjAlgos - AI-Powered Trading Platform</title>
+    <meta name="description" content="hjAlgos is an AI-powered trading platform that provides real-time stock predictions and automated trading solutions.">
+    <meta name="keywords" content="AI trading, stock predictions, automated trading, hjAlgos, hjLabs">
+    <meta name="author" content="hjLabs.in">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta name="google-site-verification" content="T1eWQ83iwSAl80jY5JhMh-a6zxsEH7c_y4kd1g1q-2c" />    
+    <meta name="yandex-verification" content="ac54ddda61a78010" />
+    <meta name="robots" content="index, follow">
+    <meta name="googlebot" content="index, follow">
+    <meta name="google" content="nositelinkssearchbox">
+    <meta name="google" content="notranslate">
+    <meta name="msvalidate.01" content="B8EF25C307D1E802093E4F760A0E99C9" />
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="hjAlgos">
+    <meta name="application-name" content="hjAlgos">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="{{ url_for('static', filename='mstile-144x144.png') }}">
+    <meta name="msapplication-config" content="{{ url_for('static', filename='browserconfig.xml') }}">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@hjLabs.in">
+    <meta name="twitter:creator" content="@hjLabs.in">
+    <meta name="twitter:title" content="hjAlgos - AI-Powered Trading Platform">
+    <meta name="twitter:description" content="hjAlgos is an AI-powered trading platform that provides real-time stock predictions and automated trading solutions.">
+    <meta name="twitter:image" content="{{ url_for('static', filename='twitter-card.png') }}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://hjalgos.hjlabs.in">
+    <meta property="og:title" content="hjAlgos - AI-Powered Trading Platform">
+    <meta property="og:description" content="hjAlgos is an AI-powered trading platform that provides real-time stock predictions and automated trading solutions.">
+    <meta property="og:image" content="{{ url_for('static', filename='og-image.jpg') }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:site_name" content="hjAlgos">    
+    
+    
     <!-- Include Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Include Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Include BokehJS -->
-    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.6.0.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <script>
@@ -157,6 +193,8 @@
 
 
 
+
+
 </head>
 
 <body class="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
@@ -268,8 +306,8 @@
                     {% if latest_prediction %}
                     <div class="text-center">
                         <p class="text-2xl font-bold">{{ latest_prediction.stock_symbol }}</p>
-                        <p class="text-gray-600 dark:text-gray-400">Last Traded Price: {% if latest_prediction.ltp %}{{
-                            '%.2f'|format(latest_prediction.ltp) }}{% else %}N/A{% endif %}</p>
+                        <p class="text-gray-600 dark:text-gray-400">LTP : {% if latest_prediction.enter_price %}{{
+                            '%.2f'|format(latest_prediction.enter_price) }}{% else %}N/A{% endif %}</p>
                         <p class="text-gray-600 dark:text-gray-400">Hold for : {{ latest_prediction.holding_period
                             }} minutes</p>
                         <p class="text-gray-600 dark:text-gray-400">AI Recommendation Time: {{
@@ -590,8 +628,6 @@
 
     <!-- Include any JavaScript files here -->
     <script>
-
-
         document.addEventListener('DOMContentLoaded', function () {
             // Dark mode toggle
             const darkModeToggle = document.getElementById('darkModeToggle');
@@ -785,19 +821,20 @@
             // Start/Stop trading
             {% if not trading %}
             document.getElementById('startButton').addEventListener('click', function () {
+                // Example of handling error responses in JavaScript
+                // Example of handling error responses in JavaScript
                 fetch('/start', { method: 'POST' })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.status === 'started') {
-                            alert('Trading started.');
-                            location.reload();
+                        if (data.status === 'error') {
+                            alert(`An error occurred. Please try again: ${data.message}`);
                         } else {
-                            if (data.message && data.message.includes('User session not found')) {
-                                attemptAutoLogin();
-                            } else {
-                                alert('Error starting trading: ' + data.message);
-                            }
+                            // Handle success
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert(`An error occurred. Please try again: ${error.message}`);
                     });
             });
             {% else %}
@@ -805,12 +842,15 @@
                 fetch('/stop', { method: 'POST' })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.status === 'stopped') {
-                            alert('Trading stopped.');
-                            location.reload();
+                        if (data.status === 'error') {
+                            alert(`An error occurred. Please try again: ${data.message}`);
                         } else {
-                            alert('Error stopping trading: ' + data.message);
+                            // Handle success
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert(`An error occurred. Please try again: ${error.message}`);
                     });
             });
             {% endif %}
@@ -884,27 +924,27 @@
             }
 
             function displayPredictionHistory(predictions, page) {
-    const predictionHistoryDiv = document.getElementById('predictionHistory');
+                const predictionHistoryDiv = document.getElementById('predictionHistory');
 
-    // Clear content only on the first page load
-    if (page === 1) {
-        predictionHistoryDiv.innerHTML = '';
-    }
+                // Clear content only on the first page load
+                if (page === 1) {
+                    predictionHistoryDiv.innerHTML = '';
+                }
 
-    if (predictions.length === 0 && page === 1) {
-        predictionHistoryDiv.innerHTML = '<p class="text-center text-gray-600 dark:text-gray-400">No predictions found.</p>';
-        document.getElementById('loadMorePredictionsButton').style.display = 'none';
-        return;
-    }
+                if (predictions.length === 0 && page === 1) {
+                    predictionHistoryDiv.innerHTML = '<p class="text-center text-gray-600 dark:text-gray-400">No predictions found.</p>';
+                    document.getElementById('loadMorePredictionsButton').style.display = 'none';
+                    return;
+                }
 
-    // Create table structure if it doesn't exist
-    let table = predictionHistoryDiv.querySelector('table');
-    if (!table) {
-        table = document.createElement('table');
-        table.classList.add('min-w-full', 'bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'rounded-md', 'overflow-hidden');
-        const thead = document.createElement('thead');
-        thead.classList.add('bg-gray-200', 'dark:bg-gray-600');
-        thead.innerHTML = `
+                // Create table structure if it doesn't exist
+                let table = predictionHistoryDiv.querySelector('table');
+                if (!table) {
+                    table = document.createElement('table');
+                    table.classList.add('min-w-full', 'bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'rounded-md', 'overflow-hidden');
+                    const thead = document.createElement('thead');
+                    thead.classList.add('bg-gray-200', 'dark:bg-gray-600');
+                    thead.innerHTML = `
             <tr>
                 <th class="py-2 px-4 text-left">Prediction Time</th>
                 <th class="py-2 px-4 text-left">Stock Symbol</th>
@@ -915,30 +955,30 @@
                 <th class="py-2 px-4 text-left">Actions</th>
             </tr>
         `;
-        table.appendChild(thead);
-        const tbody = document.createElement('tbody');
-        table.appendChild(tbody);
-        predictionHistoryDiv.appendChild(table);
-    }
+                    table.appendChild(thead);
+                    const tbody = document.createElement('tbody');
+                    table.appendChild(tbody);
+                    predictionHistoryDiv.appendChild(table);
+                }
 
-    // Populate table rows
-    const tbody = table.querySelector('tbody');
-    predictions.forEach(prediction => {
-        const row = document.createElement('tr');
-        row.classList.add('border-t', 'border-gray-300', 'dark:border-gray-600', 'hover:bg-gray-100', 'dark:hover:bg-gray-600');
+                // Populate table rows
+                const tbody = table.querySelector('tbody');
+                predictions.forEach(prediction => {
+                    const row = document.createElement('tr');
+                    row.classList.add('border-t', 'border-gray-300', 'dark:border-gray-600', 'hover:bg-gray-100', 'dark:hover:bg-gray-600');
 
-        const enterPrice = prediction.enter_price ? parseFloat(prediction.enter_price).toFixed(2) : '';
-        const exitPrice = prediction.exit_price ? parseFloat(prediction.exit_price).toFixed(2) : (prediction.temporary_exit_price ? parseFloat(prediction.temporary_exit_price).toFixed(2) : '');
-        const gainedPercent = prediction.gained_percent ? parseFloat(prediction.gained_percent).toFixed(2) : '';
+                    const enterPrice = prediction.enter_price ? parseFloat(prediction.enter_price).toFixed(2) : '';
+                    const exitPrice = prediction.exit_price ? parseFloat(prediction.exit_price).toFixed(2) : (prediction.temporary_exit_price ? parseFloat(prediction.temporary_exit_price).toFixed(2) : '');
+                    const gainedPercent = prediction.gained_percent ? parseFloat(prediction.gained_percent).toFixed(2) : '';
 
-        // Determine row background color based on Gained %
-        if (gainedPercent < 0) {
-            row.classList.add('bg-red-200', 'dark:bg-red-900');
-        } else if (gainedPercent > 0) {
-            row.classList.add('bg-green-200', 'dark:bg-green-900');
-        }
+                    // Determine row background color based on Gained %
+                    if (gainedPercent < 0) {
+                        row.classList.add('bg-red-200', 'dark:bg-red-900');
+                    } else if (gainedPercent > 0) {
+                        row.classList.add('bg-green-200', 'dark:bg-green-900');
+                    }
 
-        row.innerHTML = `
+                    row.innerHTML = `
             <td class="py-2 px-4">${prediction.prediction_time}</td>
             <td class="py-2 px-4">${prediction.stock_symbol}</td>
             <td class="py-2 px-4">${enterPrice}</td>
@@ -952,23 +992,23 @@
                 </button>
             </td>
         `;
-        tbody.appendChild(row);
-    });
+                    tbody.appendChild(row);
+                });
 
-    // Show the load more button only if predictions were returned
-    document.getElementById('loadMorePredictionsButton').style.display = predictions.length > 0 ? 'block' : 'none';
+                // Show the load more button only if predictions were returned
+                document.getElementById('loadMorePredictionsButton').style.display = predictions.length > 0 ? 'block' : 'none';
 
-    // Attach event listeners to chart buttons
-    const chartButtons = tbody.querySelectorAll('.chartButton');
-    chartButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const stockSymbol = this.dataset.stockSymbol;
-            const predictionTime = this.dataset.predictionTime;
-            const holdingPeriod = this.dataset.holdingPeriod;
-            openChartModal(stockSymbol, predictionTime, holdingPeriod);
-        });
-    });
-}
+                // Attach event listeners to chart buttons
+                const chartButtons = tbody.querySelectorAll('.chartButton');
+                chartButtons.forEach(button => {
+                    button.addEventListener('click', function () {
+                        const stockSymbol = this.dataset.stockSymbol;
+                        const predictionTime = this.dataset.predictionTime;
+                        const holdingPeriod = this.dataset.holdingPeriod;
+                        openChartModal(stockSymbol, predictionTime, holdingPeriod);
+                    });
+                });
+            }
 
             // Load More Predictions
             document.getElementById('loadMorePredictionsButton').addEventListener('click', function () {
@@ -1430,11 +1470,3 @@
 </body>
 
 </html>
-
-
-
-
-
-
-
-

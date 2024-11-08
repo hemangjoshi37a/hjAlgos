@@ -5,32 +5,25 @@ import os
 import logging
 from jugaad_trader import Zerodha
 import pyotp
-
 import datetime as dtt
-# Import Appwrite SDK
 from appwrite.client import Client
 from appwrite.services.databases import Databases
 from appwrite.exception import AppwriteException
 from appwrite.query import Query  
-
-# Import Bokeh for plotting
 from bokeh.plotting import figure
 from bokeh.embed import components
 from bokeh.models import Span
-
-# Import python-dotenv to load .env variables
 from dotenv import load_dotenv
-
 from binance.pay.merchant import Merchant as BClient
 import csv
 import os
-
+import pandas as pd
 import pytz
 from datetime import datetime, timedelta
+import asyncio
 
 # Define a timezone (e.g., UTC)
 utc = pytz.UTC
-
 
 # Load environment variables from .env file
 load_dotenv()
@@ -43,6 +36,10 @@ binance_pay_secret = os.getenv('BINANCE_PAY_SECRET')
 
 # Initialize Binance Pay client
 binance_pay_client = BClient(binance_pay_key, binance_pay_secret)
+
+# Load the symbol_token_map.csv file
+symbol_token_map_df = pd.read_csv('symbol_token_map.csv')
+symbol_token_map = dict(zip(symbol_token_map_df['Stock Symbol'], symbol_token_map_df['Instrument Token']))
 
 
 @app.after_request
@@ -88,7 +85,7 @@ users_collection_id = 'users'     # Collection for storing user info
 trades_collection_id = 'trades'   # Collection for storing trade history
 predictions_collection_id = 'predictions'  # Collection for storing predictions
 
-# User Session Class
+
 class UserSession:
     def __init__(self, user_id, quantity, fund_mode, kite):
         self.user_id = user_id
@@ -100,18 +97,27 @@ class UserSession:
         self.current_position = None  # To track current position
         self.profile_name = None
         self.available_funds = None
+        self.error_event = threading.Event()
+        self.error_message = None
 
     def start_trading(self):
         if not self.trading:
             self.trading = True
+            self.error_event.clear()
+            self.error_message = None
             self.thread = threading.Thread(target=self.run_trading_session)
             self.thread.start()
+            # Start a separate thread to monitor the trading thread
+            self.monitor_thread = threading.Thread(target=self.monitor_trading_thread)
+            self.monitor_thread.start()
 
     def stop_trading(self):
         if self.trading:
             self.trading = False
             if self.thread is not None:
                 self.thread.join()
+            if self.monitor_thread is not None:
+                self.monitor_thread.join()
 
     def run_trading_session(self):
         logging.info(f"Trading session started for user {self.user_id}")
@@ -150,6 +156,9 @@ class UserSession:
 
             except Exception as e:
                 logging.error(f"Error in trading session for user {self.user_id}: {e}")
+                self.error_event.set()
+                self.error_message = str(e)
+                self.trading = False
                 break
 
         # After trading session ends, exit any open position
@@ -157,6 +166,15 @@ class UserSession:
             self.exit_position()
             self.current_position = None
         logging.info(f"Trading session ended for user {self.user_id}")
+        
+    def monitor_trading_thread(self):
+        with app.app_context():  # Push the application context
+            while self.trading:
+                if self.error_event.is_set():
+                    logging.error(f"Trading thread encountered an error: {self.error_message}")
+                    self.trading = False
+                    return jsonify({'status': 'error', 'message': f"An error occurred. Please try again: {self.error_message}"}), 500
+                time.sleep(10)  # Check every 10 seconds
 
     def get_latest_prediction(self):
         try:
@@ -174,9 +192,9 @@ class UserSession:
                 # Check if prediction is recent
                 prediction_time = datetime.fromisoformat(prediction['prediction_time'])
                 now = datetime.now()
-                if (now - prediction_time).total_seconds() > 300:
-                    logging.info("Latest prediction is too old.")
-                    return None
+                # if (now - prediction_time).total_seconds() > 300:
+                #     logging.info("Latest prediction is too old.")
+                #     return None
                 return prediction
             else:
                 return None
@@ -211,6 +229,10 @@ class UserSession:
             logging.info(f"Entered position in {stock_symbol} with quantity {quantity}")
         except Exception as e:
             logging.error(f"Error placing buy order for {stock_symbol}: {e}")
+            self.error_event.set()
+            self.error_message = str(e)
+            self.trading = False
+            return jsonify({'status': 'error', 'message': f"Error placing buy order for {stock_symbol}: {e}"}), 500
 
     def exit_position(self):
         # Place sell order to exit current position
@@ -241,21 +263,56 @@ class UserSession:
             self.current_position = None
         except Exception as e:
             logging.error(f"Error placing sell order for {self.current_position['stock']}: {e}")
+            self.error_event.set()
+            self.error_message = str(e)
+            self.trading = False
+            return jsonify({'status': 'error', 'message': f"Error placing sell order for {self.current_position['stock']}: {e}"}), 500
 
     def calculate_quantity(self, stock_symbol):
         if self.fund_mode == 'funds':
             # Calculate quantity based on available funds
             try:
-                # Get last traded price
-                ltp = self.kite.ltp('NSE:' + stock_symbol)['NSE:' + stock_symbol]['last_price']
+                # Get last traded price using historical data
+                ltp = self.get_ltp(stock_symbol)
                 quantity = int(self.quantity // ltp)
                 return quantity
             except Exception as e:
                 logging.error(f"Error fetching LTP for {stock_symbol}: {e}")
+                self.error_event.set()
+                self.error_message = str(e)
+                self.trading = False
                 return 0
         else:
             # Use specified quantity
             return int(self.quantity)
+
+    def get_ltp(self, stock_symbol):
+        try:
+            instrument_token = symbol_token_map.get(stock_symbol)
+            if not instrument_token:
+                raise ValueError(f"Instrument token not found for {stock_symbol}")
+
+            to_date = datetime.now()
+            from_date = to_date - timedelta(days=7)
+
+            historical_data = self.kite.historical_data(
+                instrument_token=instrument_token,
+                from_date=from_date,
+                to_date=to_date,
+                interval='minute'
+            )
+
+            if historical_data:
+                ltp = historical_data[-1]['close']
+                return ltp
+            else:
+                raise ValueError(f"No historical data found for {stock_symbol}")
+        except Exception as e:
+            logging.error(f"Error fetching LTP for {stock_symbol}: {e}")
+            self.error_event.set()
+            self.error_message = str(e)
+            self.trading = False
+            return 0
 
     def record_trade(self, stock_symbol, quantity, entry_time, exit_time):
         try:
@@ -284,14 +341,20 @@ class UserSession:
             logging.info(f"Trade recorded for {stock_symbol}")
         except Exception as e:
             logging.error(f"Error recording trade: {e}")
+            self.error_event.set()
+            self.error_message = str(e)
+            self.trading = False
 
     def get_trade_price(self, transaction_type, stock_symbol, time):
-        # Placeholder method to get trade price
         try:
-            ltp = self.kite.ltp('NSE:' + stock_symbol)['NSE:' + stock_symbol]['last_price']
+            # Get last traded price using historical data
+            ltp = self.get_ltp(stock_symbol)
             return ltp
         except Exception as e:
             logging.error(f"Error fetching LTP for {stock_symbol}: {e}")
+            self.error_event.set()
+            self.error_message = str(e)
+            self.trading = False
             return 0
 
     def fetch_account_details(self):
@@ -382,7 +445,7 @@ def get_latest_prediction():
             collection_id=predictions_collection_id,
             queries=[
                 Query.order_desc('$createdAt'),
-                Query.limit(100)
+                Query.limit(1)
             ]
         )
         if documents['total'] > 0:
@@ -470,7 +533,6 @@ def logout():
     session.clear()
     return jsonify({'status': 'success'})
 
-# Route to start trading
 @app.route('/start', methods=['POST'])
 def start_trading():
     user_id = session.get('user_id')
@@ -480,7 +542,6 @@ def start_trading():
     else:
         return jsonify({'status': 'error', 'message': 'User session not found'}), 404
 
-# Route to stop trading
 @app.route('/stop', methods=['POST'])
 def stop_trading():
     user_id = session.get('user_id')
@@ -519,24 +580,22 @@ def update_quantity():
         logging.error(f"Error updating quantity/funds: {e}")
         return jsonify({'status': 'error', 'message': 'Failed to update quantity/funds'}), 500
 
-# Route to fetch trade history
 @app.route('/trade_history', methods=['GET'])
 def trade_history():
     user_id = session.get('user_id')
     if not user_id:
         return jsonify({'status': 'error', 'message': 'User session not found'}), 401
 
-    if user_id in user_sessions:
-        user_session = user_sessions[user_id]
-        try:
-            trades = user_session.kite.orders()
-            # Return trades as JSON
-            return jsonify({'status': 'success', 'trades': trades})
-        except Exception as e:
-            logging.error(f"Error fetching trade history for user {user_id}: {e}")
-            return jsonify({'status': 'error', 'message': 'Failed to fetch trade history'}), 500
-    else:
+    user_session = user_sessions.get(user_id)
+    if not user_session:
         return jsonify({'status': 'error', 'message': 'User session not found'}), 404
+
+    try:
+        trades = user_session.kite.orders()
+        return jsonify({'status': 'success', 'trades': trades})
+    except Exception as e:
+        logging.error(f"Error fetching trade history for user {user_id}: {e}")
+        return jsonify({'status': 'error', 'message': 'Failed to fetch trade history'}), 500
 
 # Route to fetch current position data
 @app.route('/current_position', methods=['GET'])
@@ -588,7 +647,6 @@ def robots_txt():
 def sitemap():
     return send_from_directory(app.static_folder, 'sitemap.xml'), 200, {'Content-Type': 'application/xml'}
 
-# Route to fetch data for prediction chart
 @app.route('/prediction_chart_data', methods=['GET'])
 def prediction_chart_data():
     user_id = session.get('user_id')
@@ -617,23 +675,18 @@ def prediction_chart_data():
         initial_time = prediction_time - dtt.timedelta(minutes=5)
         end_time = prediction_time + dtt.timedelta(minutes=holding_period + 5)
 
-        # Get instrument token for the stock
         instruments = user_session.kite.instruments("NSE")
         instrument_token = next((instrument['instrument_token'] for instrument in instruments if instrument['tradingsymbol'] == stock_symbol), None)
 
         if instrument_token:
-            # Fetch historical data
-            data = user_session.kite.historical_data(
-                instrument_token=instrument_token,
-                from_date=initial_time,
-                to_date=end_time,
-                interval='minute'
-            )
-            # Process data to convert datetime objects to strings
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            data = loop.run_until_complete(fetch_historical_data(user_session, instrument_token, initial_time, end_time))
+            loop.close()
+
             for d in data:
                 if isinstance(d['date'], datetime):
                     d['date'] = d['date'].isoformat()
-            # Return data as JSON
             return jsonify({'status': 'success', 'data': data})
         else:
             logging.info(f"Instrument token not found for {stock_symbol}")
@@ -642,7 +695,6 @@ def prediction_chart_data():
     except Exception as e:
         logging.error(f"Error fetching historical data for chart: {e}")
         return jsonify({'status': 'error', 'message': 'Failed to fetch historical data'}), 500
-
 
 
 @app.route('/historical_predictions', methods=['GET'])
@@ -1069,6 +1121,14 @@ def check_login_status():
 def serve_explanation():
     return send_from_directory('./templates/','explanation.html')
 
+async def fetch_historical_data(user_session, instrument_token, from_date, to_date):
+    return user_session.kite.historical_data(
+        instrument_token=instrument_token,
+        from_date=from_date,
+        to_date=to_date,
+        interval='minute'
+    )
+
 if __name__ == '__main__':
     create_collections()
     app.run(debug=True,port=8731)
@@ -1085,7 +1145,9 @@ if __name__ == '__main__':
     
     
     
-    
-    
-    
-    
+
+
+
+
+
+
